@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static-server",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "public"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(identify C:/Users/client20211001/Desktop/GTN_LP/images/logo.png)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill /PID 9648 /F)",
+      "Bash(find /c/Users/client20211001/Desktop/GTN_LP -name .env* -type f)"
+    ]
+  }
+}

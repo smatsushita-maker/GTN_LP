@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>診断結果 | 外国人材活用戦略診断 | GTN</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .result-main { opacity: 0; transition: opacity 0.5s ease; }
+    .result-main.visible { opacity: 1; }
+
+    .score-detail-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .score-detail-text {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.55);
+      background: rgba(255,255,255,0.06);
+      padding: 4px 12px;
+      border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    /* 改善余地メモ */
+    .improvement-note {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--primary-dark);
+      background: var(--primary-light);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      max-width: 540px;
+      line-height: 1.65;
+      text-align: left;
+    }
+
+    /* ===== 想定損失額（概算）===== */
+    .cost-estimate-section {
+      margin-top: 20px;
+      max-width: 540px;
+    }
+    .cost-estimate-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(232,178,48,0.3);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      text-align: center;
+    }
+    .cost-estimate-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 6px;
+    }
+    .cost-estimate-value {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #e8b230;
+      line-height: 1.3;
+    }
+    .cost-estimate-note {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .cost-estimate-detail {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.75);
+      margin-top: 10px;
+      line-height: 1.65;
+    }
+    .cost-estimate-cta {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(232,178,48,0.2);
+    }
+    .cost-estimate-sub {
+      font-size: 0.82rem;
+      color: #e8b230;
+      margin-top: 8px;
+      line-height: 1.6;
+      font-weight: 500;
+    }
+    .cost-estimate-urgency {
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: rgba(185,28,28,0.15);
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #fca5a5;
+      line-height: 1.65;
+    }
+    .cost-estimate-cta-text {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.65;
+    }
+    @media (max-width: 600px) {
+      .cost-estimate-value { font-size: 1.35rem; }
+      .cost-estimate-card { padding: 16px 18px; }
+    }
+
+    /* ===== v6.0 CVR最適化: ロックUI ===== */
+
+    /* リスク示唆テキスト（簡易結果直下） */
+    .risk-hint {
+      margin-top: 18px;
+      padding: 14px 20px;
+      background: rgba(185,28,28,0.12);
+      border-left: 4px solid #ef4444;
+      border-radius: var(--radius);
+      max-width: 540px;
+      text-align: left;
+    }
+    .risk-hint-text {
+      font-size: 0.88rem;
+      color: #fca5a5;
+      font-weight: 500;
+      line-height: 1.7;
+    }
+
+    /* ロック済みセクション共通 */
+    .locked-section {
+      position: relative;
+      margin: 0 auto;
+      max-width: 700px;
+      padding: 28px 24px;
+      overflow: hidden;
+    }
+    .locked-section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .locked-section-title .lock-icon {
+      font-size: 0.75rem;
+    }
+
+    /* ぼかしプレビューカード */
+    .blur-preview-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .blur-preview-card {
+      background: var(--bg);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 16px;
+      filter: blur(4px);
+      user-select: none;
+      pointer-events: none;
+    }
+    .blur-preview-card-label {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+    .blur-preview-card-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .blur-preview-card-bar {
+      margin-top: 8px;
+      height: 6px;
+      background: var(--border-light);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .blur-preview-card-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--primary);
+    }
+
+    /* ロックオーバーレイ */
+    .locked-overlay-v6 {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(2px);
+      border-radius: var(--radius);
+      cursor: pointer;
+      z-index: 2;
+    }
+    .locked-overlay-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      background: var(--cta-gradient);
+      color: var(--primary-dark);
+      font-size: 0.88rem;
+      font-weight: 800;
+      border-radius: 50px;
+      box-shadow: 0 2px 12px rgba(212,153,26,0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .locked-overlay-v6:hover .locked-overlay-pill {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 4px 20px rgba(212,153,26,0.5);
+    }
+
+    /* ロックされたリスクプレビュー */
+    .locked-risks-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .locked-risk-placeholder {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      filter: blur(3px);
+      user-select: none;
+      pointer-events: none;
+    }
+    .locked-risk-ph-icon {
+      font-size: 1rem;
+    }
+    .locked-risk-ph-text {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+    }
+
+    /* メインCTAエリア（1本化） */
+    .main-gate-section {
+      padding: 48px 20px;
+      text-align: center;
+      background: linear-gradient(180deg, var(--bg) 0%, var(--white) 100%);
+    }
+    .main-gate-inner {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .main-gate-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cta);
+      background: var(--cta-light);
+      padding: 4px 14px;
+      border-radius: 50px;
+      margin-bottom: 16px;
+    }
+    .main-gate-title {
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+    .main-gate-desc {
+      font-size: 0.88rem;
+      color: var(--text-sub);
+      line-height: 1.75;
+      margin-bottom: 24px;
+    }
+    .main-gate-includes {
+      list-style: none;
+      padding: 0;
+      margin: 0 auto 28px;
+      max-width: 440px;
+      text-align: left;
+    }
+    .main-gate-includes li {
+      font-size: 0.85rem;
+      color: var(--text-mid);
+      padding: 6px 0;
+      padding-left: 22px;
+      position: relative;
+      line-height: 1.6;
+    }
+    .main-gate-includes li::before {
+      content: '\2713';
+      position: absolute;
+      left: 0;
+      color: var(--cta);
+      font-weight: 700;
+    }
+
+    /* 簡易フォーム */
+    .gate-form {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .gate-form .form-field {
+      margin-bottom: 14px;
+    }
+    .gate-form .form-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-mid);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .gate-form .form-input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .gate-form-submit {
+      width: 100%;
+      margin-top: 8px;
+    }
+    .gate-form-note {
+      font-size: 0.72rem;
+      color: var(--text-light);
+      margin-top: 10px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .gate-form-note a {
+      color: var(--primary);
+    }
+    .gate-form-trust {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .gate-form-trust-item {
+      font-size: 0.72rem;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* フォーム送信後：完全版セクション */
+    .full-report-section {
+      padding: 40px 20px;
+      background: var(--white);
+    }
+    .full-report-inner {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .full-report-label {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 4px 14px;
+      border-radius: 50px;
+      margin-bottom: 14px;
+    }
+    .full-report-title {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 24px;
+    }
+
+    /* 相談CTA（最終） */
+    .final-consult-section {
+      padding: 44px 20px;
+      text-align: center;
+      background: linear-gradient(180deg, var(--primary-dark) 0%, #1a2340 100%);
+      color: var(--white);
+    }
+    .final-consult-inner {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .final-consult-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--white);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .final-consult-desc {
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+    .final-consult-note {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.45);
+      margin-top: 12px;
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 600px) {
+      .blur-preview-cards { grid-template-columns: 1fr; }
+      .main-gate-title { font-size: 1.15rem; }
+      .main-gate-section { padding: 36px 16px; }
+      .full-report-section { padding: 32px 16px; }
+      .final-consult-section { padding: 36px 16px; }
+      .locked-section { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body data-page="result">
+
+  <!-- ローディング -->
+  <div class="loading-overlay" id="loading-overlay" role="status" aria-live="polite">
+    <div class="loading-logo">GTN</div>
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p class="loading-text">診断結果を集計しています...</p>
+  </div>
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="./" class="logo" aria-label="GTN Global Talent Navi">
+        <span class="logo-mark">GTN</span>
+        <span class="logo-name">Global Talent Navi</span>
+      </a>
+      <span class="header-badge">診断結果</span>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <div class="result-main" id="result-main">
+
+    <!-- ==========================================
+         無料エリア（フォーム送信前に見える部分）
+         ========================================== -->
+
+    <!-- ① 簡易結果表示 -->
+    <section class="result-hero" aria-labelledby="result-heading">
+      <div class="result-hero-inner">
+        <p class="result-label">診断結果（簡易版）</p>
+
+        <div class="rate-display">
+          <div class="rate-num-wrap">
+            <span class="rate-num" id="rate-num" aria-label="成功確率">0</span>
+            <span class="rate-unit">%</span>
+          </div>
+          <p class="rate-caption">外国人材 戦力化・定着 成功確率（簡易診断）</p>
+        </div>
+
+        <div class="score-detail-row">
+          <span class="score-detail-text" id="score-detail">スコア：― / 20点</span>
+        </div>
+
+        <div style="margin-top: 20px; margin-bottom: 8px;">
+          <span class="rating-badge" id="rating-badge">総合評価：―</span>
+        </div>
+
+        <div class="result-comment fade-up fade-up-d1" id="result-comment" role="note">
+          診断結果を読み込んでいます...
+        </div>
+
+        <!-- リスク示唆テキスト -->
+        <div class="risk-hint" id="risk-hint">
+          <p class="risk-hint-text" id="risk-hint-text">
+            この診断では、外国人材の戦力化・定着に関するリスクが検出されています。<br>
+            詳細な分析と改善策は、完全版レポートでご確認いただけます。
+          </p>
+        </div>
+
+        <!-- 想定損失額（概算） -->
+        <div class="cost-estimate-section" id="cost-estimate-section" style="display:none;">
+          <div class="cost-estimate-card">
+            <div class="cost-estimate-label">想定損失額（概算）</div>
+            <div class="cost-estimate-value" id="cost-estimate-value">—</div>
+            <div class="cost-estimate-sub" id="cost-estimate-sub">
+              この状態が続くと、上記の損失が毎年発生し続ける可能性があります。
+            </div>
+            <div class="cost-estimate-note">
+              ※ 早期離職が発生した場合の参考レンジです（簡易診断ベース・採用費/教育費/再採用費含む）
+            </div>
+            <div class="cost-estimate-detail" id="cost-estimate-detail"></div>
+            <div class="cost-estimate-urgency" id="cost-estimate-urgency">
+              放置するほど、損失は積み上がります。<br>
+              今のうちに、損失の原因と改善策を把握しませんか？
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <button class="result-retry-link js-retry" aria-label="診断をやり直す">
+            もう一度診断する
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ② ロック済み4軸プレビュー（ぼかし表示） -->
+    <div class="locked-section" id="locked-axis-preview">
+      <div class="locked-section-title">
+        <span class="lock-icon">&#x1F50D;</span> 損失の原因を4つの観点で特定（完全版で確認）
+      </div>
+      <div class="blur-preview-cards" id="blur-axis-cards">
+        <div class="blur-preview-card">
+          <div class="blur-preview-card-label">戦略設計</div>
+          <div class="blur-preview-card-value">67%</div>
+          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:67%"></div></div>
+        </div>
+        <div class="blur-preview-card">
+          <div class="blur-preview-card-label">受入体制</div>
+          <div class="blur-preview-card-value">50%</div>
+          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:50%"></div></div>
+        </div>
+        <div class="blur-preview-card">
+          <div class="blur-preview-card-label">現場運用</div>
+          <div class="blur-preview-card-value">44%</div>
+          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:44%"></div></div>
+        </div>
+        <div class="blur-preview-card">
+          <div class="blur-preview-card-label">定着支援</div>
+          <div class="blur-preview-card-value">33%</div>
+          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:33%"></div></div>
+        </div>
+      </div>
+      <div class="locked-overlay-v6 js-scroll-to-gate" role="button" tabindex="0" aria-label="損失の原因と改善策を確認する">
+        <span class="locked-overlay-pill">
+          <span>&#x1F50D;</span>
+          <span>損失の原因と改善策を確認する</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- ③ ロック済みリスクプレビュー -->
+    <div class="locked-section" id="locked-risks-preview">
+      <div class="locked-section-title">
+        <span class="lock-icon">&#x26A0;</span> この損失を引き起こしているリスク（<span id="locked-risk-count-v6">―</span>件検出）
+      </div>
+      <div class="locked-risks-preview" id="locked-risks-list">
+        <div class="locked-risk-placeholder">
+          <span class="locked-risk-ph-icon">&#x26A0;</span>
+          <span class="locked-risk-ph-text">深刻度：高 ― リスク内容は完全版レポートに記載</span>
+        </div>
+        <div class="locked-risk-placeholder">
+          <span class="locked-risk-ph-icon">&#x25B3;</span>
+          <span class="locked-risk-ph-text">深刻度：中 ― 改善方向性を含めて整理されています</span>
+        </div>
+        <div class="locked-risk-placeholder">
+          <span class="locked-risk-ph-icon">&#x25B3;</span>
+          <span class="locked-risk-ph-text">深刻度：中 ― 詳細は完全版レポートをご確認ください</span>
+        </div>
+      </div>
+      <div class="locked-overlay-v6 js-scroll-to-gate" role="button" tabindex="0" aria-label="リスクの詳細と改善策を確認する">
+        <span class="locked-overlay-pill">
+          <span>&#x26A0;</span>
+          <span>リスクの詳細と改善策を確認する</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- ④ メインCTA + 簡易フォーム（1本化） -->
+    <section class="main-gate-section" id="main-gate-section" aria-labelledby="gate-heading">
+      <div class="main-gate-inner">
+        <span class="main-gate-badge">FULL REPORT</span>
+        <h2 class="main-gate-title" id="gate-heading">
+          損失の原因はどこにあるのか。<br>
+          何を改善すれば止められるのか。
+        </h2>
+        <p class="main-gate-desc">
+          完全版レポートでは、貴社の診断データをもとに<br>
+          <strong>損失の原因・改善策・優先順位</strong>を個別に分析してお届けします。<br>
+          入力は2項目・約10秒で完了します。
+        </p>
+        <ul class="main-gate-includes">
+          <li>損失を引き起こしているリスクの全件と深刻度</li>
+          <li>4軸（戦略・受入・運用・定着）ごとの<strong>原因分析と改善策</strong></li>
+          <li>最初に着手すべき<strong>優先改善ポイント</strong></li>
+          <li>GTN専門家からの経営コメント</li>
+        </ul>
+
+        <!-- 簡易フォーム（会社名 + メールのみ） -->
+        <div class="gate-form" id="gate-form-wrap">
+          <form id="lead-form" novalidate>
+            <div class="form-field">
+              <label class="form-label" for="f-company">
+                会社名<span class="form-required">必須</span>
+              </label>
+              <input class="form-input" type="text" id="f-company" name="company"
+                     placeholder="株式会社〇〇" autocomplete="organization" data-required>
+              <p class="form-error-msg" id="f-company-err" role="alert"></p>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="f-email">
+                メールアドレス<span class="form-required">必須</span>
+              </label>
+              <input class="form-input" type="email" id="f-email" name="email"
+                     placeholder="example@company.co.jp" autocomplete="email" data-required>
+              <p class="form-error-msg" id="f-email-err" role="alert"></p>
+            </div>
+
+            <!-- ===== v6.0: 以下はCVR検証後に復活可能 ===== -->
+            <!--
+            <div class="form-field">
+              <label class="form-label" for="f-name">お名前<span class="form-required">必須</span></label>
+              <input class="form-input" type="text" id="f-name" name="name" placeholder="山田 太郎" autocomplete="name" data-required>
+              <p class="form-error-msg" id="f-name-err" role="alert"></p>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="f-phone">電話番号<span class="form-optional">任意</span></label>
+              <input class="form-input" type="tel" id="f-phone" name="phone" placeholder="03-0000-0000" autocomplete="tel">
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="f-industry">業種<span class="form-required">必須</span></label>
+              <select class="form-select" id="f-industry" name="industry" data-required>
+                <option value="">選択してください</option>
+                <option value="製造業">製造業</option>
+                <option value="建設業">建設業</option>
+                <option value="農業・水産業">農業・水産業</option>
+                <option value="介護・福祉">介護・福祉</option>
+                <option value="外食・飲食">外食・飲食</option>
+                <option value="サービス業">サービス業</option>
+                <option value="小売・流通">小売・流通</option>
+                <option value="IT・情報通信">IT・情報通信</option>
+                <option value="その他">その他</option>
+              </select>
+              <p class="form-error-msg" id="f-industry-err" role="alert"></p>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="f-employees">従業員数<span class="form-required">必須</span></label>
+              <select class="form-select" id="f-employees" name="employees" data-required>
+                <option value="">選択してください</option>
+                <option value="1〜9名">1〜9名</option>
+                <option value="10〜29名">10〜29名</option>
+                <option value="30〜99名">30〜99名</option>
+                <option value="100〜299名">100〜299名</option>
+                <option value="300名以上">300名以上</option>
+              </select>
+              <p class="form-error-msg" id="f-employees-err" role="alert"></p>
+            </div>
+            <div class="form-field">
+              <label class="form-label">現在、外国人材を雇用していますか？<span class="form-required">必須</span></label>
+              <div class="foreign-employed-options" id="foreign-employed-options">
+                <label class="foreign-employed-option">
+                  <input type="radio" name="foreignEmployed" value="YES" id="fe-yes">
+                  <span class="foreign-employed-label">はい（現在雇用中）</span>
+                </label>
+                <label class="foreign-employed-option">
+                  <input type="radio" name="foreignEmployed" value="NO" id="fe-no">
+                  <span class="foreign-employed-label">いいえ（雇用していない）</span>
+                </label>
+              </div>
+              <p class="form-error-msg" id="f-foreign-employed-err" role="alert"></p>
+            </div>
+            <div class="form-field" id="foreign-count-field" style="display:none">
+              <label class="form-label" for="f-foreign-count">外国人材数（現在）<span class="form-optional">任意</span></label>
+              <input class="form-input" type="number" id="f-foreign-count" name="foreignCount" placeholder="例：3" min="0" max="9999" style="max-width:160px;">
+            </div>
+            <div class="form-field">
+              <label class="form-label">現在の課題（複数選択可）<span class="form-optional">任意</span></label>
+              <div class="challenges-grid">
+                <label class="challenge-option"><input type="checkbox" name="challenges" value="外国人採用を検討中"><span class="challenge-label">外国人採用を検討中</span></label>
+                <label class="challenge-option"><input type="checkbox" name="challenges" value="定着率に課題がある"><span class="challenge-label">定着率に課題がある</span></label>
+                <label class="challenge-option"><input type="checkbox" name="challenges" value="採用コストが高い"><span class="challenge-label">採用コストが高い</span></label>
+                <label class="challenge-option"><input type="checkbox" name="challenges" value="評価制度が整っていない"><span class="challenge-label">評価制度が整っていない</span></label>
+                <label class="challenge-option"><input type="checkbox" name="challenges" value="生活支援・現場対応に課題がある"><span class="challenge-label">生活支援・現場対応に課題がある</span></label>
+                <label class="challenge-option"><input type="checkbox" name="challenges" value="何から着手すべきかわからない"><span class="challenge-label">何から着手すべきかわからない</span></label>
+                <label class="challenge-option"><input type="checkbox" name="challenges" value="その他"><span class="challenge-label">その他</span></label>
+              </div>
+            </div>
+            -->
+
+            <div class="form-submit-wrap">
+              <button type="submit" class="btn btn-cta btn-lg btn-block gate-form-submit" id="btn-form-submit">
+                損失の原因と改善策を確認する（無料）
+              </button>
+              <!-- CTA候補（A/Bテスト用にコメントで残す）
+              候補A: 損失の原因と改善策を確認する（無料）← 現行
+              候補B: この損失を止める方法を見る（無料）
+              候補C: 無料で完全レポートを受け取る
+              候補D: 原因分析と改善の優先順位を確認する（無料）
+              -->
+            </div>
+          </form>
+
+          <p class="gate-form-note">
+            入力内容はレポート生成と相談案内のみに使用します。第三者提供はありません。<br>
+            <a href="https://globaltalent-navi.com/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
+          </p>
+          <div class="gate-form-trust">
+            <span class="gate-form-trust-item">&#x1F4E7; 即時メール送信</span>
+            <span class="gate-form-trust-item">&#x1F512; 秘密厳守</span>
+            <span class="gate-form-trust-item">&#x1F4F5; 営業電話なし</span>
+          </div>
+        </div>
+
+        <!-- サンクスメッセージ（フォーム送信後） -->
+        <div class="thanks-msg" id="thanks-msg" role="status" aria-live="polite">
+          <div class="thanks-icon" aria-hidden="true">&#x2705;</div>
+          <h3 class="thanks-title">レポートをメールで送信しました</h3>
+          <p class="thanks-desc">
+            ご登録のメールアドレスに診断結果サマリーを送信しました。<br>
+            下のボタンからPDFもダウンロードいただけます。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ゲート後エリア（フォーム送信後にのみ表示）
+         ========================================== -->
+
+    <!-- ⑤ PDFダウンロード -->
+    <section class="pdf-section hidden" id="pdf-section" aria-label="レポートダウンロード">
+      <div class="pdf-inner">
+        <div class="pdf-content">
+          <div class="pdf-icon-wrap" aria-hidden="true">&#x1F4C4;</div>
+          <h2 class="pdf-title">PDFレポートもダウンロードできます</h2>
+          <p class="pdf-desc">
+            メールで送信済みの診断結果を、PDF形式でもダウンロードいただけます。<br>
+            上司・経営層への共有に最適なフォーマットです。
+          </p>
+          <p style="font-size:0.78rem;color:var(--text-sub);margin-top:8px;">
+            &#x1F4A1; 上司の方と一緒に無料相談に参加いただくことも可能です。
+          </p>
+          <button id="btn-pdf-download" class="btn btn-primary btn-lg pdf-download-btn">
+            &#x1F4E5; PDFをダウンロードする
+          </button>
+          <p class="pdf-generating-msg hidden" id="pdf-generating-msg" aria-live="polite">
+            PDF生成中です。しばらくお待ちください...
+          </p>
+          <div class="pdf-email-note">
+            <span>&#x1F4E7;</span>
+            <span>ご登録のメールアドレスにもレポートを送付します</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 完全版分析（フォーム送信後に表示） -->
+    <section class="full-report-section hidden" id="full-report-section" aria-label="完全版分析">
+      <div class="full-report-inner">
+        <span class="full-report-label">FULL ANALYSIS</span>
+        <h2 class="full-report-title">完全版レポート：詳細分析</h2>
+
+        <!-- 4軸診断サマリー（v4.0：JS で描画） -->
+        <div id="axis-summary-section" role="region" aria-label="4軸診断サマリー"></div>
+
+        <!-- タイプ診断（JS で描画） -->
+        <div id="type-diagnosis-section" role="region" aria-label="企業タイプ診断"></div>
+
+        <!-- GTN基準との比較（JS で描画） -->
+        <div id="peer-comparison-section" role="region" aria-label="GTN基準との比較"></div>
+
+        <!-- 危機認識ブロック（JS で描画） -->
+        <div id="crisis-block-section" role="region" aria-label="リスク危機レベル"></div>
+      </div>
+    </section>
+
+    <!-- ⑦ 最終相談CTA（フォーム送信後に表示） -->
+    <section class="final-consult-section hidden" id="final-consult-section" aria-labelledby="final-consult-title">
+      <div class="final-consult-inner">
+        <h2 class="final-consult-title" id="final-consult-title">
+          レポートで見えた課題を、<br>具体的な打ち手に変えませんか？
+        </h2>
+        <p class="final-consult-desc">
+          この60分で、以下の3つが整理されます。
+        </p>
+        <ul style="list-style:none;padding:0;margin:0 auto 20px;max-width:440px;text-align:left;">
+          <li style="padding:8px 0;font-size:0.9rem;color:var(--text-mid);border-bottom:1px solid var(--border-light);">
+            <strong style="color:var(--primary);">&#x2460;</strong> 貴社が最初に着手すべき改善ポイント
+          </li>
+          <li style="padding:8px 0;font-size:0.9rem;color:var(--text-mid);border-bottom:1px solid var(--border-light);">
+            <strong style="color:var(--primary);">&#x2461;</strong> 業種・規模に合った具体的なアクション
+          </li>
+          <li style="padding:8px 0;font-size:0.9rem;color:var(--text-mid);">
+            <strong style="color:var(--primary);">&#x2462;</strong> 3ヶ月以内に整えるべきロードマップの方向性
+          </li>
+        </ul>
+        <p style="font-size:0.82rem;color:var(--text-sub);margin-bottom:20px;">
+          相談後に「次に何をすればいいか」が明確になった状態でお帰りいただけます。<br>
+          相談後の契約や申し込みの義務はありません。
+        </p>
+        <a href="#" class="btn btn-cta btn-lg js-consult-link" id="cta-consult-final"
+           onclick="trackEvent && trackEvent('cta_click', {cta_id:'consult_final', location:'final_consult_section'})">
+          改善アクションリストを受け取る（無料60分）
+        </a>
+        <p class="final-consult-note">無料 60分 ／ オンライン対応 ／ 秘密厳守 ／ 無理な営業なし</p>
+        <p style="font-size:0.78rem;color:var(--text-light);margin-top:12px;">
+          今すぐの予約が難しい場合は、追ってメールでもご案内します。
+        </p>
+      </div>
+    </section>
+
+    <!-- ⑧ GTN 信頼ブロック -->
+    <section class="trust-section" id="trust-section" aria-labelledby="trust-heading">
+      <div class="trust-inner">
+        <p class="section-eyebrow">ABOUT GTN</p>
+        <h2 class="trust-title" id="trust-heading">外国人材活用研究所とは</h2>
+        <p class="trust-desc">
+          Global Talent Navi（GTN）が運営する、外国人材活用の診断・分析プロジェクトです。<br>
+          外国人雇用を「採用」ではなく「戦力化する経営設計」と捉え、<br>
+          受入体制・定着・現場運用の観点から企業課題を整理します。
+        </p>
+        <div class="perspective-cards" role="list">
+          <div class="perspective-card" role="listitem">
+            <div class="perspective-card-icon" aria-hidden="true">&#x1F3AF;</div>
+            <div class="perspective-card-title">戦力化視点</div>
+            <div class="perspective-card-desc">採用だけでなく、定着・活躍まで見据えて整理します</div>
+          </div>
+          <div class="perspective-card" role="listitem">
+            <div class="perspective-card-icon" aria-hidden="true">&#x1F50D;</div>
+            <div class="perspective-card-title">受入設計視点</div>
+            <div class="perspective-card-desc">現場・生活支援・制度運用まで含めて診断します</div>
+          </div>
+          <div class="perspective-card" role="listitem">
+            <div class="perspective-card-icon" aria-hidden="true">&#x1F91D;</div>
+            <div class="perspective-card-title">継続支援視点</div>
+            <div class="perspective-card-desc">診断後の研修・相談・改善支援にも接続可能です</div>
+          </div>
+        </div>
+        <p class="trust-note">本診断は GTN 外国人材活用研究所の分析モデルをもとに作成されています</p>
+      </div>
+    </section>
+
+  </div><!-- /#result-main -->
+
+  <!-- フッター -->
+  <footer class="site-footer">
+    <div class="institute-branding">
+      本診断は <strong>Global Talent Navi 外国人材活用研究所</strong> の分析モデルをもとに作成されています
+    </div>
+    <div class="footer-links">
+      <a href="https://globaltalent-navi.com/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
+      <a href="terms.html">利用規約</a>
+      <a href="https://www.flair-staff.co.jp/" target="_blank" rel="noopener noreferrer">運営会社</a>
+      <a href="https://globaltalent-navi.com/contact" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
+    </div>
+    <p>&copy; 2025 Global Talent Navi (GTN). All rights reserved.</p>
+  </footer>
+
+  <!-- PDF生成ライブラリ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // 結果ページ表示フォールバック
+    const resultMain = document.getElementById('result-main');
+    setTimeout(() => {
+      if (resultMain && !resultMain.classList.contains('visible')) {
+        resultMain.classList.add('visible');
+      }
+    }, 3000);
+
+    // もう一度診断する
+    document.querySelectorAll('.js-retry').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof clearAnswers !== 'undefined') clearAnswers();
+        window.location.href = 'check.html';
+      });
+    });
+
+    // ロックオーバーレイ → フォームへスクロール
+    document.querySelectorAll('.js-scroll-to-gate').forEach(el => {
+      el.addEventListener('click', () => {
+        const target = document.getElementById('main-gate-section');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        trackEvent && trackEvent('scroll_to_form', { trigger: 'locked_overlay_click' });
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const target = document.getElementById('main-gate-section');
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

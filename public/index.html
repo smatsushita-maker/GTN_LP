@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- GTM: head内にスニペットを貼り付け -->
+  <!-- End GTM -->
+  <title>Global Talent Navi | 外国人雇用の経営課題を、採用から定着まで一気通貫で解決</title>
+  <meta name="description" content="GTNは外国人材の採用から定着・戦力化まで経営視点で一気通貫支援。業種を問わず幅広い企業の人材課題を構造的に解決します。60秒無料診断で自社の定着成功確率と隠れた課題を可視化。">
+
+  <!-- OGP -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Global Talent Navi | 外国人雇用を、採用で終わらせない。">
+  <meta property="og:description" content="採用から定着・戦力化まで一気通貫で支援。60秒の無料診断で、御社の外国人材活用の課題を可視化します。">
+  <meta property="og:url" content="https://globaltalent-navi.com/">
+  <meta property="og:image" content="https://globaltalent-navi.com/assets/images/ogp.png">
+  <meta property="og:site_name" content="Global Talent Navi">
+  <meta property="og:locale" content="ja_JP">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Global Talent Navi | 外国人雇用を、採用で終わらせない。">
+  <meta name="twitter:description" content="採用から定着・戦力化まで一気通貫で支援。60秒の無料診断で課題を可視化。">
+  <meta name="twitter:image" content="https://globaltalent-navi.com/assets/images/ogp.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/assets/images/logo2.png">
+  <link rel="apple-touch-icon" href="/assets/images/logo2.png">
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://globaltalent-navi.com/">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              800: '#1e293b',
+              900: '#0f172a',
+            },
+            gold: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans JP"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Noto Sans JP', sans-serif; color: #334155; }
+    /* ナビクリック時にfixedヘッダー分ずらす */
+    [id] { scroll-margin-top: 88px; }
+    /* フッターロゴ */
+    .footer-logo-img {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
+    .gradient-text {
+      background: linear-gradient(to right, #fbbf24, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .pulse-btn {
+      animation: pulse-shadow 2.5s infinite;
+    }
+    @keyframes pulse-shadow {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+      70% { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    .danger-stripe {
+      background: repeating-linear-gradient(
+        45deg,
+        #7f1d1d,
+        #7f1d1d 10px,
+        #991b1b 10px,
+        #991b1b 20px
+      );
+    }
+    .founder-photo-img {
+      width: 160px;
+      height: 160px;
+      object-fit: cover;
+      object-position: center 15%;
+      border-radius: 50%;
+      border: 4px solid rgba(251, 191, 36, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .header-logo-img {
+      height: 40px;
+      width: auto;
+    }
+  </style>
+</head>
+<body class="antialiased bg-gray-50">
+  <!-- GTM (noscript): body直後にnoscriptスニペットを貼り付け -->
+  <!-- End GTM (noscript) -->
+
+  <!-- ========== Header ========== -->
+  <header id="header" class="fixed top-0 w-full bg-white/95 backdrop-blur-sm shadow-sm z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <a href="#" class="flex-shrink-0">
+        <img src="/assets/images/logo2.png" alt="Global Talent Navi" class="header-logo-img">
+      </a>
+      <nav class="hidden lg:flex space-x-8">
+        <a href="#empathy" class="text-sm font-medium text-gray-600 hover:text-navy-900 transition">対象企業様</a>
+        <a href="#risk" class="text-sm font-medium text-gray-600 hover:text-navy-900 transition">隠れ損失とは</a>
+        <a href="#numbers" class="text-sm font-medium text-gray-600 hover:text-navy-900 transition">実績・強み</a>
+        <a href="#benefits" class="text-sm font-medium text-gray-600 hover:text-navy-900 transition">無料相談</a>
+      </nav>
+      <div class="flex items-center gap-4">
+        <a href="/diagnosis" class="hidden md:flex text-gold-600 font-bold border-2 border-gold-500 px-4 py-2 rounded-full hover:bg-gold-50 transition text-sm items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          60秒で診断
+        </a>
+        <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0h54zS4IpXEReThZeFR4vCksZE0X5A-HBDjZcuCIi32B-jlqhecHPG1qLvr44Y9YSF_kEb_0Fo" target="_blank" rel="noopener" class="bg-navy-900 text-white font-bold px-6 py-2 rounded-full hover:bg-navy-800 transition text-sm">
+          無料相談
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== Hero ========== -->
+  <section class="relative bg-navy-900 text-white pt-32 pb-20 lg:pt-40 lg:pb-28 px-4 overflow-hidden">
+    <div class="absolute inset-0 z-0 opacity-20">
+      <div class="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] rounded-full bg-gold-600 blur-[100px]"></div>
+      <div class="absolute bottom-[-10%] left-[-10%] w-[30rem] h-[30rem] rounded-full bg-blue-600 blur-[100px]"></div>
+    </div>
+    <div class="relative z-10 max-w-5xl mx-auto text-center">
+      <p class="inline-block border border-gold-400 text-gold-400 font-bold text-xs md:text-sm px-4 py-1.5 rounded-full mb-6 tracking-wider bg-navy-900/50">そのままでは年間100万円以上の損失が出ている可能性があります</p>
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6 tracking-tight">外国人採用で失敗する企業の多くは、<br class="hidden md:block">共通する<span class="gradient-text">"設計ミス"</span>を抱えています。</h1>
+      <p class="text-gray-300 text-lg md:text-xl lg:text-2xl mb-12 leading-relaxed max-w-4xl mx-auto font-medium">それ、現場の責任や文化の違いではありません。<br><strong class="text-white">経営の「仕組み」の問題です。</strong><br>このままでは年間数十万円以上の損失が発生している可能性があります。<br>1人辞めるごとに生じる見えない損失。今すぐ対策を始めませんか？</p>
+      <div class="flex flex-col items-center gap-3">
+        <p class="text-xl md:text-2xl text-white font-black mb-3">放置すると損失は拡大します。<br class="md:hidden">まずは現状を把握してください。</p>
+        <a href="/diagnosis" class="pulse-btn bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-xl md:text-2xl py-5 px-8 md:px-16 rounded-full shadow-2xl hover:scale-105 transition-transform duration-300 w-full sm:w-auto flex items-center justify-center gap-2">
+          <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          60秒で現状を診断する ＞
+        </a>
+        <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-3 text-sm md:text-base text-gray-400 font-bold">
+          <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 60秒で完了</span>
+          <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 個人情報入力不要</span>
+          <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> その場で結果表示</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Empathy ========== -->
+  <section id="empathy" class="py-20 lg:py-28 bg-white px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-navy-900 font-bold tracking-widest text-sm mb-6 inline-block border border-navy-900 px-3 py-1 rounded">WARNING</span>
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 mb-8 leading-tight">その問題、本当に<br class="md:hidden"><span class="text-red-600">「現場の責任」ですか？</span></h2>
+        <p class="text-xl md:text-2xl text-gray-700 font-bold mb-6">その認識のままでは、同じ失敗を繰り返します。</p>
+        <p class="text-2xl md:text-3xl text-navy-900 font-black mb-6">原因はすべて<span class="border-b-4 border-gold-500">「経営の設計」</span>にあります。</p>
+        <p class="text-lg md:text-xl text-red-600 font-bold">※気づかないうちにコストが積み上がっています。</p>
+      </div>
+      <div class="text-center mb-10">
+        <p class="text-red-600 font-bold text-lg md:text-xl inline-flex items-center justify-center gap-2 bg-red-50 px-6 md:px-10 py-4 rounded-full border border-red-200 shadow-sm w-full md:w-auto">
+          <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          <span>気づかないうちに、毎月の損失が積み上がっています。</span>
+        </p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6 lg:gap-8">
+        <div class="bg-gray-50 border-t-4 border-navy-900 rounded-lg p-8 shadow-sm"><div class="flex items-start gap-4"><div class="bg-navy-100 text-navy-900 rounded-full p-3 flex-shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div><div><h3 class="font-bold text-xl mb-3 text-gray-900">過去の失敗がトラウマに（定着しない）</h3><p class="text-gray-600">「以前採用したが、文化の違いやミスコミュニケーションですぐに辞めてしまった。人手不足は深刻だが、また失敗すると思うと再挑戦に踏み切れない。」</p></div></div></div>
+        <div class="bg-gray-50 border-t-4 border-navy-900 rounded-lg p-8 shadow-sm"><div class="flex items-start gap-4"><div class="bg-navy-100 text-navy-900 rounded-full p-3 flex-shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div><div><h3 class="font-bold text-xl mb-3 text-gray-900">現場の特定社員が疲弊（指示が伝わらない）</h3><p class="text-gray-600">「現場の教育担当者に丸投げになっている。言葉の壁で指示が伝わらず、受け入れ側の社員ばかりに負担が集中し、疲弊しきっている。」</p></div></div></div>
+        <div class="bg-gray-50 border-t-4 border-navy-900 rounded-lg p-8 shadow-sm"><div class="flex items-start gap-4"><div class="bg-navy-100 text-navy-900 rounded-full p-3 flex-shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></div><div><h3 class="font-bold text-xl mb-3 text-gray-900">生活支援・手続きで本業が圧迫</h3><p class="text-gray-600">「在留資格の更新、住居トラブル、役所の手続き…。本来の業務に集中すべき管理職や人事担当者が、間接的な生活支援に忙殺されている。」</p></div></div></div>
+        <div class="bg-gray-50 border-t-4 border-navy-900 rounded-lg p-8 shadow-sm"><div class="flex items-start gap-4"><div class="bg-navy-100 text-navy-900 rounded-full p-3 flex-shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div><h3 class="font-bold text-xl mb-3 text-gray-900">採用しても戦力化しない</h3><p class="text-gray-600">「頭数合わせで採用したものの、どう教育すれば自社の戦力になるのか正解がわからない。ただの作業員で終わらせたくないが、仕組みがない。」</p></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Risk ========== -->
+  <section id="risk" class="py-20 lg:py-28 bg-gray-900 text-white px-4 relative overflow-hidden">
+    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-gold-500"></div>
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-red-500 font-bold tracking-widest text-sm mb-2 block border border-red-500 inline-block px-3 py-1 rounded">HIDDEN COST RISK</span>
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">「人が辞める」＝<br class="md:hidden">単なる欠員ではありません。<br><span class="text-gold-400">経営基盤を圧迫する<br class="md:hidden">「見えない損失」です。</span></h2>
+        <p class="text-gray-300 text-lg">外国人材が1人離職するたびに、あなたの会社は以下のコストを気づかないうちに負担しています。</p>
+      </div>
+      <div class="bg-gray-800 rounded-2xl p-8 lg:p-12 border border-gray-700 shadow-2xl relative">
+        <div class="absolute -top-6 -right-6 w-24 h-24 bg-red-600 rounded-full blur-2xl opacity-50"></div>
+        <div class="space-y-6">
+          <div class="flex flex-col md:flex-row items-center justify-between border-b border-gray-700 pb-6"><div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-1/2"><div class="w-12 h-12 bg-gray-700 rounded flex items-center justify-center font-bold text-gold-400">01</div><span class="text-xl font-bold">採用・紹介手数料</span></div><div class="w-full md:w-1/2 flex items-center justify-end gap-4"><div class="w-full bg-gray-700 h-4 rounded-full overflow-hidden"><div class="bg-red-500 h-full" style="width: 80%"></div></div><span class="text-2xl font-black min-w-[120px] text-right">約50〜80<span class="text-sm font-normal">万円</span></span></div></div>
+          <div class="flex flex-col md:flex-row items-center justify-between border-b border-gray-700 pb-6"><div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-1/2"><div class="w-12 h-12 bg-gray-700 rounded flex items-center justify-center font-bold text-gold-400">02</div><span class="text-xl font-bold">現場の教育・研修コスト</span></div><div class="w-full md:w-1/2 flex items-center justify-end gap-4"><div class="w-full bg-gray-700 h-4 rounded-full overflow-hidden"><div class="bg-orange-500 h-full" style="width: 60%"></div></div><span class="text-2xl font-black min-w-[120px] text-right">約30〜60<span class="text-sm font-normal">万円</span></span></div></div>
+          <div class="flex flex-col md:flex-row items-center justify-between border-b border-gray-700 pb-6"><div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-1/2"><div class="w-12 h-12 bg-gray-700 rounded flex items-center justify-center font-bold text-gold-400">03</div><span class="text-xl font-bold">住居・渡航・手続き費用</span></div><div class="w-full md:w-1/2 flex items-center justify-end gap-4"><div class="w-full bg-gray-700 h-4 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full" style="width: 40%"></div></div><span class="text-2xl font-black min-w-[120px] text-right">約20〜40<span class="text-sm font-normal">万円</span></span></div></div>
+        </div>
+        <div class="mt-10 bg-red-900/40 border border-red-500/50 rounded-xl p-6 text-center">
+          <p class="text-red-300 font-bold mb-2">1人離職するごとの推定損失額</p>
+          <div class="text-4xl md:text-6xl font-black text-white">100〜200<span class="text-2xl font-bold ml-1">万円 / 人</span></div>
+          <p class="mt-4 text-gray-300 text-sm md:text-base">※ さらに「現場の士気低下」「残された社員の残業代増」「顧客からの納期遅れによる信用失墜」など、算定不能な被害が加わります。</p>
+        </div>
+      </div>
+      <div class="mt-12 text-center">
+        <p class="text-xl md:text-2xl font-bold mb-3">この損失は、「人を入れ替える」だけでは絶対に止まりません。</p>
+        <p class="text-red-400 font-bold text-xl md:text-2xl mb-6">放置すると損失は拡大します。<br>まずは現状を把握してください。</p>
+        <a href="/diagnosis" class="inline-flex items-center justify-center gap-2 bg-white text-gray-900 font-black text-xl md:text-2xl py-5 px-8 md:px-12 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:bg-gray-100 hover:scale-105 transition-all duration-300"><span class="text-2xl">&#128202;</span> 60秒で現状を診断する ＞</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Numbers ========== -->
+  <section id="numbers" class="py-20 bg-navy-800 text-white border-y border-gray-700">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="text-center mb-10">
+        <p class="text-gold-400 font-bold tracking-widest text-sm mb-2">PROVEN RECORD</p>
+        <h2 class="text-2xl md:text-3xl font-bold">数字が証明する、GTNの支援力</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-gray-600">
+        <div class="text-center py-6 md:py-0 px-4"><p class="text-gray-300 text-sm font-bold mb-2">累計支援企業数</p><p class="text-6xl md:text-7xl font-black text-white mb-2 leading-none">100<span class="text-2xl text-gray-400 ml-1">社超</span></p><p class="text-sm text-gray-400 font-medium">※製造・物流・サービスなど多業種</p></div>
+        <div class="text-center py-6 md:py-0 px-4"><p class="text-gray-300 text-sm font-bold mb-2">入社1年後 定着率</p><p class="text-6xl md:text-7xl font-black text-gold-400 mb-2 leading-none">92<span class="text-3xl text-gold-500 ml-1">%</span></p><p class="text-sm text-gray-400 font-medium">※「採用前」の仕組みづくりの成果</p></div>
+        <div class="text-center py-6 md:py-0 px-4"><p class="text-gray-300 text-sm font-bold mb-2">外国人雇用支援の実績</p><p class="text-6xl md:text-7xl font-black text-white mb-2 leading-none">10<span class="text-2xl text-gray-400 ml-1">年超</span></p><p class="text-sm text-gray-400 font-medium">※法改正の変化にも完全対応</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Solution ========== -->
+  <section id="solution" class="py-20 lg:py-28 bg-gray-50 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-navy-900 font-bold tracking-widest text-sm mb-2 block">THE ROOT CAUSE</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-6">なぜ、人材紹介会社を使っても<br class="md:hidden">人が定着しないのか？</h2>
+        <p class="text-gray-600 text-lg">答えは明確です。<br class="md:hidden">彼らは「紹介」がゴールであり、「定着する組織作り」のプロではないからです。</p>
+      </div>
+      <div class="bg-white rounded-3xl shadow-2xl overflow-hidden mb-16 border border-gray-200">
+        <div class="grid md:grid-cols-2">
+          <div class="p-8 md:p-12 bg-gray-100 relative">
+            <h3 class="text-xl font-bold text-gray-600 mb-8 text-center border-b border-gray-300 pb-4">一般的な人材紹介会社</h3>
+            <ul class="space-y-6">
+              <li class="flex items-start gap-4 text-gray-500 font-medium text-lg"><span class="text-red-500 flex-shrink-0 mt-0.5"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg></span>採用のマッチングで支援終了</li>
+              <li class="flex items-start gap-4 text-gray-500 font-medium text-lg"><span class="text-red-500 flex-shrink-0 mt-0.5"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg></span>入社後のフォローは現場任せ</li>
+              <li class="flex items-start gap-4 text-gray-500 font-medium text-lg"><span class="text-red-500 flex-shrink-0 mt-0.5"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg></span>辞めたら「別の人を紹介します」</li>
+            </ul>
+            <div class="mt-10 text-center"><p class="text-gray-500 font-bold">結果：離職のループが続く</p></div>
+            <div class="hidden md:flex absolute top-1/2 -right-8 transform -translate-y-1/2 w-16 h-16 bg-white rounded-full items-center justify-center shadow-lg z-10 font-black text-gray-400 text-xl border border-gray-200">VS</div>
+          </div>
+          <div class="p-8 md:p-12 bg-navy-900 text-white relative">
+            <h3 class="text-2xl font-black text-gold-400 mb-8 text-center border-b border-gray-700 pb-4">GTNの「経営支援」</h3>
+            <ul class="space-y-6">
+              <li class="flex items-start gap-4 text-white font-bold text-xl"><span class="text-gold-400 flex-shrink-0 mt-0.5"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></span>採用前に「受け入れ体制」から設計</li>
+              <li class="flex items-start gap-4 text-white font-bold text-xl"><span class="text-gold-400 flex-shrink-0 mt-0.5"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></span>現場への事前教育・支援まで一括</li>
+              <li class="flex items-start gap-4 text-white font-bold text-xl"><span class="text-gold-400 flex-shrink-0 mt-0.5"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></span>トラブル発生時は間に入り構造的解決</li>
+            </ul>
+            <div class="mt-10 text-center"><p class="text-gold-400 font-black text-xl">結果：離職が止まり、戦力化する</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="text-center mb-10"><h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4">GTNは「人を入れる」会社ではありません。<br>「人が定着し、利益を生む仕組みを創る」会社です。</h3></div>
+    </div>
+  </section>
+
+  <!-- ========== Founder ========== -->
+  <section class="py-20 lg:py-28 bg-white px-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="bg-gray-50 rounded-3xl shadow-lg border border-gray-200 overflow-hidden flex flex-col md:flex-row">
+        <div class="w-full md:w-2/5 bg-navy-900 min-h-[300px] relative flex flex-col items-center justify-center p-8 text-white">
+          <img src="/assets/images/founder.jpg" alt="松下 精" class="founder-photo-img mb-6">
+          <div class="text-center">
+            <p class="font-bold text-gray-300">Global Talent Navi 代表</p>
+            <p class="text-3xl font-black mt-2 tracking-widest">松下 精</p>
+            <p class="text-sm text-gray-400 mt-2">株式会社フレアー 専務取締役</p>
+          </div>
+        </div>
+        <div class="w-full md:w-3/5 p-8 md:p-12">
+          <span class="text-gold-600 font-bold tracking-widest text-sm mb-3 block border-l-4 border-gold-500 pl-2">MESSAGE</span>
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6 leading-tight">10年で100社以上の現場を見てきた<br>結論。<br>「外国人材は、<br>仕組みで必ず戦力になる」</h2>
+          <div class="space-y-5 text-gray-700 font-medium">
+            <p>私は10年以上にわたり、製造、物流、サービス業など、様々な現場の最前線で100社以上の外国人雇用に伴走してきました。</p>
+            <p>数え切れないほどの失敗と成功を見る中で痛感したのは、<strong>「外国人材が定着しない原因は彼らの能力ではなく、受け入れ側の『仕組みの欠陥』にある」</strong>ということです。</p>
+            <p>だからこそ私は、人材を右から左へ流すだけの紹介業ではなく、企業が自力で人材を戦力化できる「強い組織づくり」を支援するためにGTNを立ち上げました。</p>
+            <p class="font-bold text-navy-900 text-lg">人手不足は、その場しのぎの採用では解決しません。<br>御社の経営基盤を根本から強くするお手伝いをさせてください。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Case Study ========== -->
+  <section id="case-study" class="py-20 lg:py-28 bg-gray-100 px-4 border-t border-gray-200">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-16">
+        <span class="text-navy-900 font-bold tracking-widest text-sm mb-2 block">CASE STUDY</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-6">「仕組み」を変えれば、<br class="md:hidden">現場はここまで変わる。</h2>
+        <p class="text-gray-600 text-lg">属人的な受け入れから脱却し、戦力化に成功した企業の事例です。</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-xl overflow-visible border border-gray-200">
+        <div class="bg-navy-900 text-white px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-t-2xl"><h3 class="font-bold text-xl">従業員120名 / 労働集約型ビジネスの事例</h3><span class="bg-gold-500 text-navy-900 text-sm font-bold px-3 py-1 rounded-full">離職率80% → 0%へ</span></div>
+        <div class="p-8 md:p-10 grid md:grid-cols-2 gap-8 relative">
+          <div class="relative z-10"><div class="text-gray-500 font-black text-2xl mb-4 flex items-center gap-2"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>導入前 (BEFORE)</div><ul class="space-y-4 text-gray-600 font-medium"><li class="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-400">紹介会社経由で5名採用するも、半年で4名が退職。紹介料と教育費が完全に赤字。</li><li class="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-400">現場に教育を丸投げ。指示が伝わらずミスが多発し、教育担当者がノイローゼ気味に。</li><li class="bg-gray-50 p-4 rounded-lg border-l-4 border-gray-400">「もう外国人は入れたくない」と現場が猛反発。人手不足で業務が回らず、売上機会を毎月数百万円損失。</li></ul></div>
+          <div class="hidden md:flex absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 text-gold-500 bg-white rounded-full shadow-lg w-14 h-14 items-center justify-center border-2 border-gold-400"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg></div>
+          <div class="relative z-10"><div class="text-navy-900 font-black text-2xl mb-4 flex items-center gap-2"><svg class="w-8 h-8 text-gold-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>GTN導入後 (AFTER)</div><ul class="space-y-4 text-gray-600 font-medium"><li class="bg-blue-50 p-4 rounded-lg border-l-4 border-navy-900">GTNが採用前のペルソナ再設計と現場向け「受け入れ研修」を実施。<strong class="text-navy-900">入社後のギャップをゼロに</strong>。</li><li class="bg-blue-50 p-4 rounded-lg border-l-4 border-navy-900">日本語教育と生活トラブル対応をGTNがフルサポート。<strong class="text-navy-900">現場は「業務を教えること」だけに集中</strong>可能に。</li><li class="bg-blue-50 p-4 rounded-lg border-l-4 border-navy-900">新たに採用した6名は<strong class="text-navy-900">1年経過後も離職ゼロ</strong>。現場の評価も反転し、安定した業務運営を実現。</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Note Articles (信頼補強・知見コンテンツ) ========== -->
+  <section class="py-20 lg:py-28 bg-white px-4 border-t border-gray-200">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-14">
+        <span class="text-navy-900 font-bold tracking-widest text-sm mb-2 block">KNOWLEDGE</span>
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4">外国人雇用で失敗しないための知識</h2>
+        <p class="text-gray-500 text-base">現場でよくある失敗パターンと、GTNが蓄積してきた実務ノウハウをお届けします。</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6 mb-14">
+
+        <!-- 記事カード1：共感 -->
+        <a href="https://note.com/gt_navi/n/nb9f8da513618" target="_blank" rel="noopener" class="group block bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div class="bg-navy-900 text-gold-400 text-xs font-bold tracking-widest px-5 py-2">NOTE ARTICLE</div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-3 group-hover:text-gold-600 transition-colors">外国人材のマネジメントで8割の企業がやってしまう失敗——「優しい日本語」の落とし穴</h3>
+            <p class="text-sm text-gray-500 mb-4 leading-relaxed">良かれと思った「優しい日本語」が逆効果になるケースも。現場で起きがちなコミュニケーションの誤解と、その解決策を解説します。</p>
+            <span class="text-gold-600 text-sm font-bold inline-flex items-center gap-1 group-hover:gap-2 transition-all">記事を読む <span>&rarr;</span></span>
+          </div>
+        </a>
+
+        <!-- 記事カード2：理解 -->
+        <a href="https://note.com/gt_navi/n/n0536ed968288" target="_blank" rel="noopener" class="group block bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div class="bg-navy-900 text-gold-400 text-xs font-bold tracking-widest px-5 py-2">NOTE ARTICLE</div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-3 group-hover:text-gold-600 transition-colors">外国人材が辞める会社の共通点</h3>
+            <p class="text-sm text-gray-500 mb-4 leading-relaxed">離職が続く企業には共通する構造的な原因があります。採用・受け入れ・定着の各フェーズで見落とされがちなポイントを整理しました。</p>
+            <span class="text-gold-600 text-sm font-bold inline-flex items-center gap-1 group-hover:gap-2 transition-all">記事を読む <span>&rarr;</span></span>
+          </div>
+        </a>
+
+        <!-- 記事カード3：解決 -->
+        <a href="https://note.com/gt_navi/n/n70b54b442077" target="_blank" rel="noopener" class="group block bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+          <div class="bg-navy-900 text-gold-400 text-xs font-bold tracking-widest px-5 py-2">NOTE ARTICLE</div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-3 group-hover:text-gold-600 transition-colors">外国人材の離職を止める「最初の90日」の過ごし方—入社後3ヶ月で決まる定着の分岐点</h3>
+            <p class="text-sm text-gray-500 mb-4 leading-relaxed">入社後90日間の対応が定着率を大きく左右します。オンボーディング設計の具体的なポイントと、成功企業が実践している施策を紹介します。</p>
+            <span class="text-gold-600 text-sm font-bold inline-flex items-center gap-1 group-hover:gap-2 transition-all">記事を読む <span>&rarr;</span></span>
+          </div>
+        </a>
+
+      </div>
+
+      <!-- 記事セクション後の再CTA -->
+      <div class="text-center pt-8 border-t border-gray-200">
+        <p class="text-gray-700 font-bold text-lg mb-6">まずは自社の課題を把握することから始めてみませんか？</p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+          <a href="/diagnosis" class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-lg py-4 px-8 rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            60秒で現状を診断する
+          </a>
+          <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0h54zS4IpXEReThZeFR4vCksZE0X5A-HBDjZcuCIi32B-jlqhecHPG1qLvr44Y9YSF_kEb_0Fo" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 bg-navy-900 text-white font-bold text-lg py-4 px-8 rounded-full hover:bg-navy-800 transition">
+            無料で相談する
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Benefits ========== -->
+  <section id="benefits" class="py-20 lg:py-28 bg-navy-900 text-white px-4 relative overflow-hidden">
+    <div class="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')]"></div>
+    <div class="max-w-5xl mx-auto relative z-10">
+      <div class="text-center mb-16">
+        <span class="text-gold-400 font-bold tracking-widest text-sm mb-2 block">WHAT YOU GET</span>
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">「完全レポート・無料相談」で、<br>あなたは以下の3つを手に入れます</h2>
+        <p class="text-gray-300 text-lg">診断でわかった課題に対し、<br class="md:hidden">プロの目線で御社の現状を分析し<br class="md:hidden">明確なアウトプットをお渡しします。</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6 mb-16">
+        <div class="glass-panel p-8 rounded-xl text-center border-t-4 border-gold-500 transform hover:-translate-y-2 transition duration-300"><div class="w-16 h-16 bg-navy-800 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-600"><svg class="w-8 h-8 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg></div><h3 class="text-xl font-bold mb-4">1. 離職リスクと<br>根本原因の特定</h3><p class="text-gray-400 text-sm text-left">ヒアリングを通じ、なぜ人が定着しないのか、または今後どこでつまずくのか、御社固有の「仕組みの欠陥」を特定します。</p></div>
+        <div class="glass-panel p-8 rounded-xl text-center border-t-4 border-gold-500 transform hover:-translate-y-2 transition duration-300"><div class="w-16 h-16 bg-navy-800 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-600"><svg class="w-8 h-8 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></div><h3 class="text-xl font-bold mb-4">2. 年間推定損失額の<br>シミュレーション</h3><p class="text-gray-400 text-sm text-left">現在の体制のまま進めた場合、1年間でどれだけの見えないコスト（採用費、教育費、生産性低下）が流出するかを金額で提示します。</p></div>
+        <div class="glass-panel p-8 rounded-xl text-center border-t-4 border-gold-500 transform hover:-translate-y-2 transition duration-300"><div class="w-16 h-16 bg-navy-800 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-600"><svg class="w-8 h-8 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg></div><h3 class="text-xl font-bold mb-4">3. 最短3ヶ月の<br>改善ロードマップ</h3><p class="text-gray-400 text-sm text-left">採用前から入社後までのフェーズごとに、いつ、誰が、何をすべきかをまとめた「自走可能な受け入れロードマップ」をご提案します。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Urgency ========== -->
+  <section class="py-20 bg-white px-4 border-b border-gray-200">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="danger-stripe text-white font-bold py-2 px-6 rounded-t-lg inline-block text-sm tracking-widest">WARNING: 経営リスクの警告</div>
+      <div class="bg-gray-50 border-x border-b border-gray-300 rounded-b-lg p-8 md:p-12 shadow-lg">
+        <h2 class="text-2xl md:text-3xl font-black text-gray-900 mb-6">「来年から本気出す」では、<br class="md:hidden">経営の選択肢が狭まります。</h2>
+        <div class="text-left space-y-4 text-gray-700 font-medium max-w-2xl mx-auto">
+          <p><strong class="text-red-600">① 競合への人材流出：</strong><br>受け入れ体制が整った企業から、優秀な外国人材を根こそぎ確保しています。後回しにするほど、御社は「採用の選択肢」を失います。</p>
+          <p><strong class="text-red-600">② 法制度の急激な変化：</strong><br>ルールの厳格化が進んでいます。知識不足のまま見切り発車で採用すると、法違反によるリスクを抱え込むことになります。</p>
+          <p><strong class="text-red-600">③ 既存社員の連鎖退職：</strong><br>体制なき採用は現場の負担を激増させます。結果として、会社を支えてきた優秀な日本人社員まで辞めていく事態を招きかねません。</p>
+        </div>
+        <p class="mt-8 text-xl font-bold text-navy-900 border-b-2 border-gold-500 inline-block pb-1">体制づくりには最低3ヶ月かかります。<br class="md:hidden">今日動くべきです。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Final CTA ========== -->
+  <section id="diagnosis" class="py-24 bg-gradient-to-br from-navy-900 to-navy-800 text-white px-4 relative border-t-8 border-gold-500">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-3xl md:text-5xl font-black mb-6 leading-tight">放置すると損失は拡大します。<br>まずは現状を把握してください。</h2>
+      <p class="text-xl md:text-2xl text-gray-300 font-medium mb-12">たった60秒で自社のリスクを診断できます。</p>
+      <div class="bg-white text-gray-900 p-8 md:p-10 rounded-2xl shadow-2xl mb-12 max-w-3xl mx-auto relative transform md:scale-105">
+        <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-2 rounded-full text-sm shadow-lg whitespace-nowrap">＼ 60秒の回答後、画面に以下が表示されます ／</div>
+        <h3 class="text-2xl font-bold mb-6 text-center border-b pb-4">無料診断で明確になる「3つの事実」</h3>
+        <ul class="text-left space-y-5 font-bold text-lg max-w-xl mx-auto">
+          <li class="flex items-center gap-3"><span class="bg-navy-900 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">1</span>現在の体制から算出する「外国人材の定着成功確率（スコア）」</li>
+          <li class="flex items-center gap-3"><span class="bg-navy-900 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">2</span>なぜ人が定着しないのか？「課題の根本原因」の特定</li>
+          <li class="flex items-center gap-3"><span class="bg-navy-900 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">3</span>今後発生しうる最悪のトラブルと「見えない損失」のヒント</li>
+        </ul>
+        <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+          <p class="text-navy-900 font-bold text-lg mb-2">【さらに】詳細な分析をご希望の方へ</p>
+          <p class="text-gray-700 font-medium">診断結果をもとにした無料相談（完全レポート）にて、<br><span class="text-red-600 font-bold">「具体的な年間損失額の試算」</span>と<br class="md:hidden"><span class="text-gold-600 border-b-2 border-gold-600">「自社専用の3ヶ月改善ロードマップ」</span>をご案内します。</p>
+        </div>
+      </div>
+      <div class="relative inline-block w-full sm:w-auto">
+        <a href="/diagnosis" class="pulse-btn block w-full bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-2xl md:text-3xl py-6 px-8 md:px-16 rounded-full shadow-[0_0_40px_rgba(245,158,11,0.5)] hover:scale-105 transition-transform duration-300">60秒で現状を診断する ＞</a>
+      </div>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-6 text-base md:text-lg text-gray-300 font-bold">
+        <span class="flex items-center gap-1"><svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 60秒で完了</span>
+        <span class="flex items-center gap-1"><svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 個人情報入力不要</span>
+        <span class="flex items-center gap-1"><svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> その場で結果表示</span>
+      </div>
+      <div id="cta" class="mt-20 pt-16 border-t border-gray-700">
+        <p class="text-xl font-bold mb-6">診断をスキップし、<br class="md:hidden">今すぐ専門家に自社の課題を<br class="md:hidden">直接相談したい方はこちら</p>
+        <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0h54zS4IpXEReThZeFR4vCksZE0X5A-HBDjZcuCIi32B-jlqhecHPG1qLvr44Y9YSF_kEb_0Fo" target="_blank" rel="noopener" class="inline-block bg-white text-navy-900 font-bold text-lg py-4 px-10 rounded-full hover:bg-gray-100 transition shadow-lg">無料オンライン経営相談を予約する</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Footer ========== -->
+  <footer class="bg-gray-900 text-gray-400 py-12 px-4 border-t border-gray-800">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="text-center md:text-left">
+        <div class="flex items-center gap-2 justify-center md:justify-start mb-2">
+          <img src="/assets/images/logo2.png" alt="Global Talent Navi" class="footer-logo-img">
+        </div>
+        <p class="text-sm">外国人材の採用から定着・戦力化まで<br>経営視点で伴走する外国人雇用の経営支援パートナー</p>
+      </div>
+      <div class="flex gap-6 text-sm">
+        <a href="https://www.flair-staff.co.jp/company.html" target="_blank" rel="noopener" class="hover:text-white transition">運営会社</a>
+        <a href="/privacy" class="hover:text-white transition">プライバシーポリシー</a>
+        <a href="/contact" class="hover:text-white transition">お問い合わせ</a>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto mt-8 text-center text-xs text-gray-600">&copy; 2024 Global Talent Navi. All rights reserved.</div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>
