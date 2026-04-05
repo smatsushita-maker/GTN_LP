@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="./css/style.css">
   <style>
     /* LP専用スタイル補足 */
     .hero-cta-wrap {
@@ -135,7 +135,7 @@
 
       <div class="hero-cta-wrap">
         <!-- id="cta-hero" でGA4クリック計測が可能 -->
-        <a href="check.html" class="btn btn-cta btn-lg" id="cta-hero"
+        <a href="./check.html" class="btn btn-cta btn-lg" id="cta-hero"
            onclick="trackEvent && trackEvent('cta_click', {cta_id:'hero', location:'hero'})">
           無料で診断する →
         </a>
@@ -350,7 +350,7 @@
     <h2 id="lp-cta-title">60秒で診断・完全レポート無料取得</h2>
     <p>外国人雇用は「採用」ではなく「設計」です。<br>まず現状を把握して、完全版レポートで課題を整理しましょう。</p>
     <!-- id="cta-bottom" でGA4クリック計測が可能 -->
-    <a href="check.html" class="btn btn-cta btn-lg" id="cta-bottom"
+    <a href="./check.html" class="btn btn-cta btn-lg" id="cta-bottom"
        onclick="trackEvent && trackEvent('cta_click', {cta_id:'bottom', location:'lp_bottom'})">
       無料で診断する →
     </a>
@@ -368,14 +368,14 @@
     </div>
     <div class="footer-links">
       <a href="https://globaltalent-navi.com/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
-      <a href="terms.html">利用規約</a>
+      <a href="./terms.html">利用規約</a>
       <a href="https://www.flair-staff.co.jp/" target="_blank" rel="noopener noreferrer">運営会社</a>
       <a href="https://globaltalent-navi.com/contact" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
     </div>
     <p>© 2025 Global Talent Navi (GTN). All rights reserved.</p>
   </footer>
 
-  <script src="js/app.js"></script>
+  <script src="./js/app.js"></script>
   <script>
     // スクロールアニメーション
     const observer = new IntersectionObserver((entries) => {
@@ -402,11 +402,11 @@
 
     (function updateCheckLinks() {
       if (!_lpSrc && !_lpRef) return;
-      document.querySelectorAll('a[href="check.html"]').forEach(function (a) {
+      document.querySelectorAll('a[href="./check.html"]').forEach(function (a) {
         const qp = new URLSearchParams();
         if (_lpSrc) qp.set('source', _lpSrc);
         if (_lpRef) qp.set('ref',    _lpRef);
-        a.href = 'check.html?' + qp.toString();
+        a.href = './check.html?' + qp.toString();
       });
     })();
 

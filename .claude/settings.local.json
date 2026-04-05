@@ -6,7 +6,8 @@
       "Bash(netstat -ano)",
       "Bash(findstr :3000)",
       "Bash(taskkill /PID 9648 /F)",
-      "Bash(find /c/Users/client20211001/Desktop/GTN_LP -name .env* -type f)"
+      "Bash(find /c/Users/client20211001/Desktop/GTN_LP -name .env* -type f)",
+      "Bash(grep -v '^\\\\./\\\\|href=\"\"\"\"\\\\./\\\\|src=\"\"\"\"\\\\./\\\\|//.*diagnosis')"
     ]
   }
 }

@@ -525,7 +525,7 @@ const CheckPage = {
         source: loadSource(),
       });
       sessionStorage.setItem('gtn_risk_current', '0');
-      window.location.href = 'result.html';
+      window.location.href = './result.html';
     }
   },
 
@@ -556,7 +556,7 @@ const ResultPage = {
 
     // 回答がなければ診断ページへ戻す
     if (Object.keys(this.answers).length === 0) {
-      window.location.href = 'check.html';
+      window.location.href = './check.html';
       return;
     }
 

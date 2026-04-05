@@ -1,13 +1,4 @@
 {
   "outputDirectory": "public",
-  "rewrites": [
-    { "source": "/diagnosis", "destination": "/diagnosis/index.html" },
-    { "source": "/contact", "destination": "/contact/index.html" },
-    { "source": "/privacy", "destination": "/privacy/index.html" },
-    { "source": "/report", "destination": "/report/index.html" }
-  ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/404.html", "status": 404 }
-  ]
+  "trailingSlash": true
 }
