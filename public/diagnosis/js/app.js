@@ -2052,7 +2052,7 @@ ResultPage.buildReportHTML = function (formData) {
     <div style="padding-top:13px;border-top:1px solid #e5e7eb;
                 font-size:10px;color:#9ca3af;text-align:center;line-height:1.7;">
       本レポートは Global Talent Navi 外国人材活用研究所 の分析モデルをもとに企業別に自動生成されたものです。<br>
-      株式会社フレアスタッフ / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
+      株式会社フレアー / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
       プライバシーポリシー: https://globaltalent-navi.com/privacy
     </div>
   </div>
