@@ -9,7 +9,9 @@
       "Bash(find /c/Users/client20211001/Desktop/GTN_LP -name .env* -type f)",
       "Bash(grep -v '^\\\\./\\\\|href=\"\"\"\"\\\\./\\\\|src=\"\"\"\"\\\\./\\\\|//.*diagnosis')",
       "Bash(grep -n 'フレアスタッフ\\\\|フレアースタッフ\\\\|フレアー' public/privacy/index.html public/index.html public/diagnosis/*.html)",
-      "Bash(grep -n 'flair-staff' public/index.html public/diagnosis/*.html)"
+      "Bash(grep -n 'flair-staff' public/index.html public/diagnosis/*.html)",
+      "mcp__726e2001-4775-4118-95e5-08109fd22b64__organizations_list",
+      "mcp__726e2001-4775-4118-95e5-08109fd22b64__scenarios_list"
     ]
   }
 }
