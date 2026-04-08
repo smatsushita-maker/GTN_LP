@@ -2098,6 +2098,16 @@ ResultPage.generatePDF = async function (formData) {
   // レイアウト確定を待つ
   await new Promise(r => setTimeout(r, 600));
 
+  // ── フォントロード完了を待機（日本語フォントの置換崩れ防止） ──
+  // document.fonts.ready が未対応のブラウザでは即座に解決される
+  try {
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+  } catch (fontErr) {
+    console.warn('[GTN] フォントロード待機失敗（処理は続行）:', fontErr);
+  }
+
   try {
     const pdf    = new jsPDF('p', 'mm', 'a4');
     const pageW  = pdf.internal.pageSize.getWidth();   // 210mm
@@ -2130,12 +2140,18 @@ ResultPage.generatePDF = async function (formData) {
       }
 
       // ブロック単体を canvas 化
+      // onclone: クローンDOM生成後にフォント再ロードを待機して日本語フォント置換を防ぐ
       const canvas = await html2canvas(block, {
         scale:           SCALE,
         useCORS:         true,
         backgroundColor: '#ffffff',
         logging:         false,
         windowWidth:     794,
+        onclone: async (clonedDoc) => {
+          if (clonedDoc.fonts && clonedDoc.fonts.ready) {
+            try { await clonedDoc.fonts.ready; } catch (_) {}
+          }
+        },
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
@@ -2172,14 +2188,17 @@ ResultPage.generatePDF = async function (formData) {
       }
     }
 
-    // ページ番号とフッターを各ページに追加
+    // ── ページ番号とフッターを各ページに追加 ──
+    // 注意: jsPDFの標準フォント（Helvetica）は日本語字形を持たないため、
+    //       日本語テキストを pdf.text() で描画すると文字化けする。
+    //       フッターは ASCII のみで構成する。
     const totalPages = pdf.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       pdf.setPage(p);
       pdf.setFontSize(8);
       pdf.setTextColor(160, 160, 160);
-      pdf.text('GTN 外国人材活用戦略診断レポート', 10, pageH - 5);
-      pdf.text(`${p} / ${totalPages}`, pageW - 18, pageH - 5);
+      pdf.text('GTN Foreign Talent Diagnosis Report', 10, pageH - 5);
+      pdf.text(`Page ${p} / ${totalPages}`, pageW - 28, pageH - 5);
     }
 
     pdf.save('GTN_外国人材活用戦略診断レポート.pdf');
