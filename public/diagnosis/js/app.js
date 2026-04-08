@@ -1745,19 +1745,15 @@ ResultPage.buildReportHTML = function (formData) {
        </div>`;
 
   // 改善ポイントHTML
-  const nextStepsHTML = NEXT_STEPS.items.map((item, i) => `
-    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;
-                padding:13px 15px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
-      <div style="width:26px;height:26px;border-radius:50%;background:#1a5c3a;
-                  color:white;font-size:12px;font-weight:900;display:flex;
-                  align-items:center;justify-content:center;flex-shrink:0;">
-        ${i + 1}
-      </div>
-      <div>
-        <div style="font-weight:700;font-size:13px;color:#1f2937;margin-bottom:3px;">${item.title}</div>
-        <div style="font-size:12px;color:#6b7280;line-height:1.6;">${item.desc}</div>
-      </div>
-    </div>`).join('');
+  // ※ 数字バッジは flex 中央揃えだと html2canvas で1pxズレる事例があるため、
+  //   line-height で確実に縦中央 + text-align:center で横中央。空白混入を防ぐためテンプレ空白を除去。
+  const nextStepsHTML = NEXT_STEPS.items.map((item, i) =>
+    `<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;padding:13px 15px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">`
+    + `<div style="width:26px;height:26px;border-radius:50%;background:#1a5c3a;color:#fff;font-size:13px;font-weight:900;line-height:26px;text-align:center;flex-shrink:0;">${i + 1}</div>`
+    + `<div><div style="font-weight:700;font-size:13px;color:#1f2937;margin-bottom:3px;">${item.title}</div>`
+    + `<div style="font-size:12px;color:#6b7280;line-height:1.6;">${item.desc}</div></div>`
+    + `</div>`
+  ).join('');
 
   // 4軸カードHTML（PDF版：軸ごとの詳細コメント付き）
   const axisCardsHTML = ['strategy','structure','operation','retention'].map(axis => {
@@ -1768,12 +1764,12 @@ ResultPage.buildReportHTML = function (formData) {
     const isWeakest = this.axisScores && this.axisScores.weakestAxis === axis;
     const barColor  = rate < 45 ? '#b91c1c' : rate < 65 ? '#d97706' : '#1a5c3a';
     return `
-      <div style="background:${info.bg};border:1px solid ${info.border};border-radius:8px;
+      <div style="position:relative;background:${info.bg};border:1px solid ${info.border};border-radius:8px;
                   padding:12px 13px;${isWeakest ? 'outline:2px solid '+info.color+';' : ''}">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-          <span style="font-size:15px;">${info.icon}</span>
-          <span style="font-size:12px;font-weight:700;color:${info.color};">${info.label}</span>
-          ${isWeakest ? `<span style="font-size:10px;font-weight:700;background:${barColor};color:white;padding:2px 7px;border-radius:10px;margin-left:auto;">優先改善</span>` : ''}
+        ${isWeakest ? `<span style="position:absolute;top:8px;right:8px;display:inline-block;font-size:10px;font-weight:700;background:${barColor};color:#fff;padding:3px 9px;border-radius:10px;line-height:1.2;white-space:nowrap;">優先改善</span>` : ''}
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;${isWeakest ? 'padding-right:64px;' : ''}">
+          <span style="font-size:15px;line-height:1;">${info.icon}</span>
+          <span style="font-size:12px;font-weight:700;color:${info.color};line-height:1.3;">${info.label}</span>
         </div>
         <div style="font-size:10px;color:#6b7280;margin-bottom:7px;">${info.desc}</div>
         <div style="height:9px;background:#e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:4px;">
