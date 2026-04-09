@@ -168,9 +168,17 @@
       font-weight: 500;
       letter-spacing: 0.02em;
     }
-    .hero-sp .nowrap {
+    /* 意味のまとまり保護（全体ユーティリティ） */
+    .nowrap {
       display: inline-block;
       white-space: nowrap;
+    }
+    /* Risk h2 のスマホ表示は nowrap 保護と両立するためフォントを調整 */
+    @media (max-width: 767px) {
+      #risk h2 {
+        font-size: 22px;
+        line-height: 1.5;
+      }
     }
   </style>
 </head>
@@ -231,12 +239,12 @@
       <!-- スマホ版Hero（簡潔版） -->
       <div class="hero-sp">
         <h1>
-          <span class="nowrap">外国人雇用は、</span>
-          <span class="nowrap">採用より先に</span>
+          外国人雇用は、<br>
+          採用より先に<br>
           <span class="nowrap"><span class="gradient-text">「設計」</span>で決まる。</span>
         </h1>
         <p class="hero-sp-sub">
-          <span class="nowrap">60秒で、外国人雇用の</span>
+          60秒で、外国人雇用の<br>
           <span class="nowrap">成功確率をチェック。</span>
         </p>
         <a href="/diagnosis" class="pulse-btn hero-sp-cta">
@@ -244,8 +252,7 @@
           <span class="nowrap">無料で診断する（60秒）</span>
         </a>
         <p class="hero-sp-assure">
-          <span class="nowrap">・個人情報入力不要</span>
-          <span class="nowrap">／その場で結果表示</span>
+          <span class="nowrap">・個人情報入力不要</span>／<span class="nowrap">その場で結果表示</span>
         </p>
       </div>
     </div>
@@ -282,7 +289,7 @@
     <div class="max-w-5xl mx-auto">
       <div class="text-center mb-16">
         <span class="text-red-500 font-bold tracking-widest text-sm mb-2 block border border-red-500 inline-block px-3 py-1 rounded">HIDDEN COST RISK</span>
-        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">「人が辞める」＝<br class="md:hidden">単なる欠員ではありません。<br><span class="text-gold-400">経営基盤を圧迫する<br class="md:hidden">「見えない損失」です。</span></h2>
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">「人が辞める」＝<br class="md:hidden"><span class="nowrap">単なる欠員ではありません。</span><br><span class="text-gold-400">経営基盤を圧迫する<br class="md:hidden"><span class="nowrap">「見えない損失」です。</span></span></h2>
         <p class="text-gray-300 text-lg">外国人材が1人離職するたびに、あなたの会社は以下のコストを気づかないうちに負担しています。</p>
       </div>
       <div class="bg-gray-800 rounded-2xl p-8 lg:p-12 border border-gray-700 shadow-2xl relative">
