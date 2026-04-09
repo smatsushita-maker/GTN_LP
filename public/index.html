@@ -124,6 +124,50 @@
       height: 40px;
       width: auto;
     }
+    /* ===== Hero PC/SP 出し分け ===== */
+    .hero-pc { display: block; }
+    .hero-sp { display: none; }
+    @media (max-width: 767px) {
+      .hero-pc { display: none; }
+      .hero-sp { display: block; }
+    }
+    .hero-sp h1 {
+      font-size: clamp(26px, 7.2vw, 32px);
+      line-height: 1.45;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      margin-bottom: 22px;
+      color: #ffffff;
+    }
+    .hero-sp .hero-sp-sub {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #e2e8f0;
+      margin-bottom: 28px;
+      font-weight: 500;
+    }
+    .hero-sp .hero-sp-cta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 60px;
+      padding: 18px 16px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #fbbf24, #f59e0b);
+      color: #0f172a;
+      font-weight: 900;
+      font-size: 19px;
+      box-shadow: 0 10px 30px rgba(245,158,11,0.35);
+    }
+    .hero-sp .hero-sp-assure {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body class="antialiased bg-gray-50">
@@ -161,20 +205,34 @@
       <div class="absolute bottom-[-10%] left-[-10%] w-[30rem] h-[30rem] rounded-full bg-blue-600 blur-[100px]"></div>
     </div>
     <div class="relative z-10 max-w-5xl mx-auto text-center">
-      <p class="inline-block border border-gold-400 text-gold-400 font-bold text-xs md:text-sm px-4 py-1.5 rounded-full mb-6 tracking-wider bg-navy-900/50">そのままでは年間100万円以上の損失が出ている可能性があります</p>
-      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6 tracking-tight">外国人採用で失敗する企業の多くは、<br class="hidden md:block">共通する<span class="gradient-text">"設計ミス"</span>を抱えています。</h1>
-      <p class="text-gray-300 text-lg md:text-xl lg:text-2xl mb-12 leading-relaxed max-w-4xl mx-auto font-medium">それ、現場の責任や文化の違いではありません。<br><strong class="text-white">経営の「仕組み」の問題です。</strong><br>このままでは年間数十万円以上の損失が発生している可能性があります。<br>1人辞めるごとに生じる見えない損失。今すぐ対策を始めませんか？</p>
-      <div class="flex flex-col items-center gap-3">
-        <p class="text-xl md:text-2xl text-white font-black mb-3">放置すると損失は拡大します。<br class="md:hidden">まずは現状を把握してください。</p>
-        <a href="/diagnosis" class="pulse-btn bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-xl md:text-2xl py-5 px-8 md:px-16 rounded-full shadow-2xl hover:scale-105 transition-transform duration-300 w-full sm:w-auto flex items-center justify-center gap-2">
-          <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-          60秒で現状を診断する ＞
-        </a>
-        <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-3 text-sm md:text-base text-gray-400 font-bold">
-          <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 60秒で完了</span>
-          <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 個人情報入力不要</span>
-          <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> その場で結果表示</span>
+      <!-- PC版Hero（既存内容をそのまま維持） -->
+      <div class="hero-pc">
+        <p class="inline-block border border-gold-400 text-gold-400 font-bold text-xs md:text-sm px-4 py-1.5 rounded-full mb-6 tracking-wider bg-navy-900/50">そのままでは年間100万円以上の損失が出ている可能性があります</p>
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6 tracking-tight">外国人採用で失敗する企業の多くは、<br class="hidden md:block">共通する<span class="gradient-text">"設計ミス"</span>を抱えています。</h1>
+        <p class="text-gray-300 text-lg md:text-xl lg:text-2xl mb-12 leading-relaxed max-w-4xl mx-auto font-medium">それ、現場の責任や文化の違いではありません。<br><strong class="text-white">経営の「仕組み」の問題です。</strong><br>このままでは年間数十万円以上の損失が発生している可能性があります。<br>1人辞めるごとに生じる見えない損失。今すぐ対策を始めませんか？</p>
+        <div class="flex flex-col items-center gap-3">
+          <p class="text-xl md:text-2xl text-white font-black mb-3">放置すると損失は拡大します。<br class="md:hidden">まずは現状を把握してください。</p>
+          <a href="/diagnosis" class="pulse-btn bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-xl md:text-2xl py-5 px-8 md:px-16 rounded-full shadow-2xl hover:scale-105 transition-transform duration-300 w-full sm:w-auto flex items-center justify-center gap-2">
+            <svg class="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            60秒で現状を診断する ＞
+          </a>
+          <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-3 text-sm md:text-base text-gray-400 font-bold">
+            <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 60秒で完了</span>
+            <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> 個人情報入力不要</span>
+            <span class="flex items-center gap-1"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"></path></svg> その場で結果表示</span>
+          </div>
         </div>
+      </div>
+
+      <!-- スマホ版Hero（簡潔版） -->
+      <div class="hero-sp">
+        <h1>外国人雇用は、<br>採用より先に<br><span class="gradient-text">「設計」</span>で決まる。</h1>
+        <p class="hero-sp-sub">60秒で、外国人雇用の<br>成功確率をチェック。</p>
+        <a href="/diagnosis" class="pulse-btn hero-sp-cta">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          無料で診断する（60秒）
+        </a>
+        <p class="hero-sp-assure">・個人情報入力不要／その場で結果表示</p>
       </div>
     </div>
   </section>
