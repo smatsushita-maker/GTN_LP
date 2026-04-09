@@ -168,6 +168,10 @@
       font-weight: 500;
       letter-spacing: 0.02em;
     }
+    .hero-sp .nowrap {
+      display: inline-block;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body class="antialiased bg-gray-50">
@@ -226,13 +230,23 @@
 
       <!-- スマホ版Hero（簡潔版） -->
       <div class="hero-sp">
-        <h1>外国人雇用は、<br>採用より先に<br><span class="gradient-text">「設計」</span>で決まる。</h1>
-        <p class="hero-sp-sub">60秒で、外国人雇用の<br>成功確率をチェック。</p>
+        <h1>
+          <span class="nowrap">外国人雇用は、</span>
+          <span class="nowrap">採用より先に</span>
+          <span class="nowrap"><span class="gradient-text">「設計」</span>で決まる。</span>
+        </h1>
+        <p class="hero-sp-sub">
+          <span class="nowrap">60秒で、外国人雇用の</span>
+          <span class="nowrap">成功確率をチェック。</span>
+        </p>
         <a href="/diagnosis" class="pulse-btn hero-sp-cta">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-          無料で診断する（60秒）
+          <span class="nowrap">無料で診断する（60秒）</span>
         </a>
-        <p class="hero-sp-assure">・個人情報入力不要／その場で結果表示</p>
+        <p class="hero-sp-assure">
+          <span class="nowrap">・個人情報入力不要</span>
+          <span class="nowrap">／その場で結果表示</span>
+        </p>
       </div>
     </div>
   </section>
