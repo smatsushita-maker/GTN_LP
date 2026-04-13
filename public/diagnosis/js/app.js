@@ -243,9 +243,10 @@ const AXIS_IMPROVEMENT_NOTES = {
    ストレージユーティリティ
    ============================================= */
 
-const STORAGE_ANSWERS_KEY = 'gtn_risk_answers';    // { "1": "A", "2": "C", ... }
-const STORAGE_SOURCE_KEY  = 'gtn_risk_source';     // 流入元（bni / linkedin / x / note / facebook / direct）
-const STORAGE_REF_KEY     = 'gtn_risk_ref';        // 紹介者・紹介コード（任意）
+const STORAGE_ANSWERS_KEY  = 'gtn_risk_answers';    // { "1": "A", "2": "C", ... }
+const STORAGE_SOURCE_KEY   = 'gtn_risk_source';     // 流入元（bni / linkedin / x / note / facebook / direct）
+const STORAGE_REF_KEY      = 'gtn_risk_ref';        // 紹介者・紹介コード（任意）
+const STORAGE_INDUSTRY_KEY = 'gtn_risk_industry';   // 業種（AI個別最適化用・スコア非影響）
 
 /** トラッキングパラメータのストレージキー一覧（後から参照用） */
 const TRACKING_KEYS = {
@@ -266,6 +267,15 @@ function loadAnswers() {
 function clearAnswers() {
   localStorage.removeItem(STORAGE_ANSWERS_KEY);
   sessionStorage.removeItem('gtn_risk_current');
+}
+
+/** 業種を保存（AI個別最適化用・スコアに影響しない） */
+function saveIndustry(val) {
+  localStorage.setItem(STORAGE_INDUSTRY_KEY, val || '');
+}
+/** 業種を読み込む */
+function loadIndustry() {
+  return localStorage.getItem(STORAGE_INDUSTRY_KEY) || '';
 }
 
 function saveCurrentIndex(idx) {
@@ -403,6 +413,8 @@ async function sendToGAS(payload) {
 const CheckPage = {
   answers: {},
   currentIdx: 0,
+  viewedQuestions: {},  // QA: question_viewed 重複発火防止用
+  _autoAdvanceTimer: null,  // UX: 自動遷移タイマーID
 
   init() {
     // トラッキングパラメータ（source / ref）を保存（v2.3）
@@ -416,6 +428,12 @@ const CheckPage = {
 
     this.bindEvents();
     this.render();
+
+    // QA: 診断ページ到達イベント（page_view_lp と同形式）
+    trackEvent('page_view_check', {
+      source: loadSource(),
+      ref:    loadRef(),
+    });
   },
 
   bindEvents() {
@@ -427,12 +445,15 @@ const CheckPage = {
     const q   = QUESTIONS[this.currentIdx];
     const tot = QUESTIONS.length;
 
-    // プログレスバー（回答済み数ベース）
+    // プログレスバー（回答済み数ベース・上限100%）
     const answeredCount = Object.keys(this.answers).length;
-    const pct = Math.round((answeredCount / tot) * 100);
+    const pct = Math.min(Math.round((answeredCount / tot) * 100), 100);
     document.getElementById('progress-fill').style.width = pct + '%';
     document.getElementById('progress-label').textContent =
       `質問 ${this.currentIdx + 1} / ${tot}`;
+    // progress-count を直接更新（MutationObserver 非依存で安定化）
+    const pctEl = document.getElementById('progress-count');
+    if (pctEl) pctEl.textContent = pct + '% 完了';
 
     // 質問本文
     document.getElementById('q-label').textContent = `Q${q.id}`;
@@ -483,9 +504,19 @@ const CheckPage = {
     card.classList.remove('fade-up');
     void card.offsetWidth;
     card.classList.add('fade-up');
+
+    // QA: 問ごとの表示計測（初回表示のみ発火、戻るで再表示した場合はスキップ）
+    if (!this.viewedQuestions[q.id]) {
+      this.viewedQuestions[q.id] = true;
+      trackEvent('question_viewed', {
+        question_num: q.id,
+        source:       loadSource(),
+      });
+    }
   },
 
   onSelect(qId, label) {
+    const wasAnswered = this.answers[qId] !== undefined;
     this.answers[qId] = label;
     saveAnswers(this.answers);
     document.getElementById('btn-next').disabled = false;
@@ -498,10 +529,17 @@ const CheckPage = {
       answer_label: label,
       answer_score: opt.score,
     });
+
+    // UX: 初回選択時のみ0.5秒後に自動遷移（回答変更時・最終問はスキップ）
+    if (!wasAnswered && this.currentIdx < QUESTIONS.length - 1) {
+      clearTimeout(this._autoAdvanceTimer);
+      this._autoAdvanceTimer = setTimeout(() => this.next(), 500);
+    }
   },
 
   prev() {
     if (this.currentIdx > 0) {
+      clearTimeout(this._autoAdvanceTimer);  // UX: 自動遷移キャンセル
       this.currentIdx--;
       saveCurrentIndex(this.currentIdx);
       this.render();
@@ -525,7 +563,7 @@ const CheckPage = {
         source: loadSource(),
       });
       sessionStorage.setItem('gtn_risk_current', '0');
-      window.location.href = './result.html';
+      window.location.href = 'result.html';
     }
   },
 
@@ -556,7 +594,7 @@ const ResultPage = {
 
     // 回答がなければ診断ページへ戻す
     if (Object.keys(this.answers).length === 0) {
-      window.location.href = './check.html';
+      window.location.href = 'check.html';
       return;
     }
 
@@ -947,7 +985,7 @@ const ResultPage = {
       name:            val('#f-name'),
       email:           val('#f-email'),
       phone:           val('#f-phone'),
-      industry:        val('#f-industry'),
+      industry:        val('#f-industry') || loadIndustry(),
       employees:       val('#f-employees'),
       foreignEmployed: foreignEmployedEl ? foreignEmployedEl.value : '',
       foreignCount:    val('#f-foreign-count'),
@@ -1130,7 +1168,7 @@ function getSourceMessage(source) {
 const REFERRAL_COPY_TEXT =
   '外国人採用を検討している企業様向けの簡易診断です。\n' +
   '採用の進め方、受入体制、定着リスクを整理できます。\n' +
-  '▶ https://globaltalent-navi.com/diagnosis';
+  '▶ https://www.globaltalent-navi.com/diagnosis/';
 
 /* =============================================
    評価別コンテンツ（v2.1 追加）
@@ -1745,15 +1783,19 @@ ResultPage.buildReportHTML = function (formData) {
        </div>`;
 
   // 改善ポイントHTML
-  // ※ 数字バッジは flex 中央揃えだと html2canvas で1pxズレる事例があるため、
-  //   line-height で確実に縦中央 + text-align:center で横中央。空白混入を防ぐためテンプレ空白を除去。
-  const nextStepsHTML = NEXT_STEPS.items.map((item, i) =>
-    `<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;padding:13px 15px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">`
-    + `<div style="width:26px;height:26px;border-radius:50%;background:#1a5c3a;color:#fff;font-size:13px;font-weight:900;line-height:26px;text-align:center;flex-shrink:0;">${i + 1}</div>`
-    + `<div><div style="font-weight:700;font-size:13px;color:#1f2937;margin-bottom:3px;">${item.title}</div>`
-    + `<div style="font-size:12px;color:#6b7280;line-height:1.6;">${item.desc}</div></div>`
-    + `</div>`
-  ).join('');
+  const nextStepsHTML = NEXT_STEPS.items.map((item, i) => `
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;
+                padding:13px 15px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+      <div style="width:26px;height:26px;border-radius:50%;background:#1a5c3a;
+                  color:white;font-size:12px;font-weight:900;display:flex;
+                  align-items:center;justify-content:center;flex-shrink:0;">
+        ${i + 1}
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:13px;color:#1f2937;margin-bottom:3px;">${item.title}</div>
+        <div style="font-size:12px;color:#6b7280;line-height:1.6;">${item.desc}</div>
+      </div>
+    </div>`).join('');
 
   // 4軸カードHTML（PDF版：軸ごとの詳細コメント付き）
   const axisCardsHTML = ['strategy','structure','operation','retention'].map(axis => {
@@ -1764,12 +1806,12 @@ ResultPage.buildReportHTML = function (formData) {
     const isWeakest = this.axisScores && this.axisScores.weakestAxis === axis;
     const barColor  = rate < 45 ? '#b91c1c' : rate < 65 ? '#d97706' : '#1a5c3a';
     return `
-      <div style="position:relative;background:${info.bg};border:1px solid ${info.border};border-radius:8px;
+      <div style="background:${info.bg};border:1px solid ${info.border};border-radius:8px;
                   padding:12px 13px;${isWeakest ? 'outline:2px solid '+info.color+';' : ''}">
-        ${isWeakest ? `<span style="position:absolute;top:8px;right:8px;display:inline-block;font-size:10px;font-weight:700;background:${barColor};color:#fff;padding:3px 9px;border-radius:10px;line-height:1.2;white-space:nowrap;">優先改善</span>` : ''}
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;${isWeakest ? 'padding-right:64px;' : ''}">
-          <span style="font-size:15px;line-height:1;">${info.icon}</span>
-          <span style="font-size:12px;font-weight:700;color:${info.color};line-height:1.3;">${info.label}</span>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="font-size:15px;">${info.icon}</span>
+          <span style="font-size:12px;font-weight:700;color:${info.color};">${info.label}</span>
+          ${isWeakest ? `<span style="font-size:10px;font-weight:700;background:${barColor};color:white;padding:2px 7px;border-radius:10px;margin-left:auto;">優先改善</span>` : ''}
         </div>
         <div style="font-size:10px;color:#6b7280;margin-bottom:7px;">${info.desc}</div>
         <div style="height:9px;background:#e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:4px;">
@@ -2048,7 +2090,7 @@ ResultPage.buildReportHTML = function (formData) {
     <div style="padding-top:13px;border-top:1px solid #e5e7eb;
                 font-size:10px;color:#9ca3af;text-align:center;line-height:1.7;">
       本レポートは Global Talent Navi 外国人材活用研究所 の分析モデルをもとに企業別に自動生成されたものです。<br>
-      株式会社フレアー / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
+      株式会社フレアスタッフ / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
       プライバシーポリシー: https://globaltalent-navi.com/privacy
     </div>
   </div>
@@ -2094,16 +2136,6 @@ ResultPage.generatePDF = async function (formData) {
   // レイアウト確定を待つ
   await new Promise(r => setTimeout(r, 600));
 
-  // ── フォントロード完了を待機（日本語フォントの置換崩れ防止） ──
-  // document.fonts.ready が未対応のブラウザでは即座に解決される
-  try {
-    if (document.fonts && document.fonts.ready) {
-      await document.fonts.ready;
-    }
-  } catch (fontErr) {
-    console.warn('[GTN] フォントロード待機失敗（処理は続行）:', fontErr);
-  }
-
   try {
     const pdf    = new jsPDF('p', 'mm', 'a4');
     const pageW  = pdf.internal.pageSize.getWidth();   // 210mm
@@ -2136,18 +2168,12 @@ ResultPage.generatePDF = async function (formData) {
       }
 
       // ブロック単体を canvas 化
-      // onclone: クローンDOM生成後にフォント再ロードを待機して日本語フォント置換を防ぐ
       const canvas = await html2canvas(block, {
         scale:           SCALE,
         useCORS:         true,
         backgroundColor: '#ffffff',
         logging:         false,
         windowWidth:     794,
-        onclone: async (clonedDoc) => {
-          if (clonedDoc.fonts && clonedDoc.fonts.ready) {
-            try { await clonedDoc.fonts.ready; } catch (_) {}
-          }
-        },
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.92);
@@ -2184,17 +2210,14 @@ ResultPage.generatePDF = async function (formData) {
       }
     }
 
-    // ── ページ番号とフッターを各ページに追加 ──
-    // 注意: jsPDFの標準フォント（Helvetica）は日本語字形を持たないため、
-    //       日本語テキストを pdf.text() で描画すると文字化けする。
-    //       フッターは ASCII のみで構成する。
+    // ページ番号とフッターを各ページに追加
     const totalPages = pdf.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       pdf.setPage(p);
       pdf.setFontSize(8);
       pdf.setTextColor(160, 160, 160);
-      pdf.text('GTN Foreign Talent Diagnosis Report', 10, pageH - 5);
-      pdf.text(`Page ${p} / ${totalPages}`, pageW - 28, pageH - 5);
+      pdf.text('GTN 外国人材活用戦略診断レポート', 10, pageH - 5);
+      pdf.text(`${p} / ${totalPages}`, pageW - 18, pageH - 5);
     }
 
     pdf.save('GTN_外国人材活用戦略診断レポート.pdf');

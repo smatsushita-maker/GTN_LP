@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <base href="/diagnosis/" />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>診断ページ | 外国人雇用 成功確率診断 | GTN</title>
@@ -8,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-page="check">
 
@@ -73,22 +74,14 @@
   <footer class="site-footer">
     <div class="footer-links">
       <a href="https://globaltalent-navi.com/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
-      <a href="./terms.html">利用規約</a>
+      <a href="terms.html">利用規約</a>
       <a href="https://www.flair-staff.co.jp/" target="_blank" rel="noopener noreferrer">運営会社</a>
       <a href="https://globaltalent-navi.com/contact" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
     </div>
     <p>© 2025 Global Talent Navi (GTN). All rights reserved.</p>
   </footer>
 
-  <script src="./js/app.js"></script>
-  <script>
-    // プログレス%表示をプログレスバーと同期
-    const fillEl  = document.getElementById('progress-fill');
-    const countEl = document.getElementById('progress-count');
-    const obs = new MutationObserver(() => {
-      countEl.textContent = fillEl.style.width + ' 完了';
-    });
-    obs.observe(fillEl, { attributes: true, attributeFilter: ['style'] });
-  </script>
+  <script src="js/app.js"></script>
+  <!-- progress-count は app.js の render() 内で直接更新するため、MutationObserver は不要 -->
 </body>
 </html>

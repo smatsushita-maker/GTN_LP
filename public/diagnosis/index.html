@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <base href="/diagnosis/" />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>外国人雇用 成功確率診断（無料版）| Global Talent Navi</title>
@@ -11,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="css/style.css">
   <style>
     /* LP専用スタイル補足 */
     .hero-cta-wrap {
@@ -19,6 +20,7 @@
       flex-direction: column;
       align-items: flex-start;
       gap: 12px;
+      margin-top: 24px;
     }
     .hero-cta-note {
       font-size: 0.78rem;
@@ -105,48 +107,57 @@
     </div>
   </header>
 
-  <!-- ヒーロー（ファーストビュー） -->
+  <!-- ヒーロー（ファーストビュー：簡素化） -->
   <section class="hero" aria-labelledby="hero-title">
     <div class="hero-inner">
-      <div class="hero-label">無料 · 3分 · 10問 · 登録不要</div>
+      <div class="hero-label">無料 · 3分 · 登録不要</div>
       <h1 id="hero-title">
         外国人雇用<br>
         <span class="accent">成功確率診断</span>
       </h1>
       <p class="hero-sub">
-        3分で、あなたの会社の外国人材 戦力化・定着リスクと成功確率を簡易診断。<br>
-        これから採用する企業にも、すでに雇用中の企業にも対応しています。
+        3分で、リスクと改善ポイントが分かる
       </p>
 
-      <div class="hero-points">
-        <div class="hero-point">
-          <span class="hero-point-icon">✓</span>
-          受入体制の弱点がわかる
+      <!-- 業種選択（AI個別最適化用・スコア非影響） -->
+      <div class="industry-select-wrap" id="industry-select-wrap">
+        <p class="industry-select-label">業種を選択してください</p>
+        <p class="industry-select-sub">より実態に近い診断結果を表示するために使用します</p>
+        <div class="industry-select-grid" id="industry-select-grid" role="radiogroup" aria-label="業種選択">
+          <label class="industry-option">
+            <input type="radio" name="industry" value="製造業" /><span>製造業</span>
+          </label>
+          <label class="industry-option">
+            <input type="radio" name="industry" value="食品加工業" /><span>食品加工業</span>
+          </label>
+          <label class="industry-option">
+            <input type="radio" name="industry" value="建設業" /><span>建設業</span>
+          </label>
+          <label class="industry-option">
+            <input type="radio" name="industry" value="物流・倉庫業" /><span>物流・倉庫業</span>
+          </label>
+          <label class="industry-option">
+            <input type="radio" name="industry" value="外食業" /><span>外食業</span>
+          </label>
+          <label class="industry-option">
+            <input type="radio" name="industry" value="宿泊業" /><span>宿泊業</span>
+          </label>
+          <label class="industry-option">
+            <input type="radio" name="industry" value="介護" /><span>介護</span>
+          </label>
+          <label class="industry-option">
+            <input type="radio" name="industry" value="その他" /><span>その他</span>
+          </label>
         </div>
-        <div class="hero-point">
-          <span class="hero-point-icon">✓</span>
-          離職リスクの有無がわかる
-        </div>
-        <div class="hero-point">
-          <span class="hero-point-icon">✓</span>
-          戦力化・定着のために整えるべきポイントがわかる
-        </div>
+        <p class="industry-select-error hidden" id="industry-error">業種を選択してください</p>
       </div>
 
       <div class="hero-cta-wrap">
         <!-- id="cta-hero" でGA4クリック計測が可能 -->
-        <a href="./check.html" class="btn btn-cta btn-lg" id="cta-hero"
+        <a href="check.html" class="btn btn-cta btn-lg" id="cta-hero"
            onclick="trackEvent && trackEvent('cta_click', {cta_id:'hero', location:'hero'})">
           無料で診断する →
         </a>
-        <span class="hero-cta-note">診断後に完全版レポート（PDF）を無料でお受け取りいただけます</span>
-      </div>
-
-      <div class="hero-meta">
-        <span class="hero-meta-item">⏱ 約60秒</span>
-        <span class="hero-meta-item">📋 10問</span>
-        <span class="hero-meta-item">📄 完全版レポート付き</span>
-        <span class="hero-meta-item">📱 スマホ対応</span>
       </div>
     </div>
   </section>
@@ -350,7 +361,7 @@
     <h2 id="lp-cta-title">60秒で診断・完全レポート無料取得</h2>
     <p>外国人雇用は「採用」ではなく「設計」です。<br>まず現状を把握して、完全版レポートで課題を整理しましょう。</p>
     <!-- id="cta-bottom" でGA4クリック計測が可能 -->
-    <a href="./check.html" class="btn btn-cta btn-lg" id="cta-bottom"
+    <a href="check.html" class="btn btn-cta btn-lg" id="cta-bottom"
        onclick="trackEvent && trackEvent('cta_click', {cta_id:'bottom', location:'lp_bottom'})">
       無料で診断する →
     </a>
@@ -368,14 +379,14 @@
     </div>
     <div class="footer-links">
       <a href="https://globaltalent-navi.com/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
-      <a href="./terms.html">利用規約</a>
+      <a href="terms.html">利用規約</a>
       <a href="https://www.flair-staff.co.jp/" target="_blank" rel="noopener noreferrer">運営会社</a>
       <a href="https://globaltalent-navi.com/contact" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
     </div>
     <p>© 2025 Global Talent Navi (GTN). All rights reserved.</p>
   </footer>
 
-  <script src="./js/app.js"></script>
+  <script src="js/app.js"></script>
   <script>
     // スクロールアニメーション
     const observer = new IntersectionObserver((entries) => {
@@ -402,11 +413,11 @@
 
     (function updateCheckLinks() {
       if (!_lpSrc && !_lpRef) return;
-      document.querySelectorAll('a[href="./check.html"]').forEach(function (a) {
+      document.querySelectorAll('a[href="check.html"]').forEach(function (a) {
         const qp = new URLSearchParams();
         if (_lpSrc) qp.set('source', _lpSrc);
         if (_lpRef) qp.set('ref',    _lpRef);
-        a.href = './check.html?' + qp.toString();
+        a.href = 'check.html?' + qp.toString();
       });
     })();
 
@@ -428,6 +439,43 @@
     if (typeof trackEvent !== 'undefined') {
       trackEvent('page_view_lp', { source: _lpSrc || 'direct', ref: _lpRef || '' });
     }
+
+    // ⑤ 業種選択バリデーション + 保存（CTAクリック時）
+    (function setupIndustryGate() {
+      var errorEl = document.getElementById('industry-error');
+      var grid    = document.getElementById('industry-select-grid');
+
+      // ラジオ選択時にエラーを消す
+      if (grid) {
+        grid.addEventListener('change', function () {
+          if (errorEl) errorEl.classList.add('hidden');
+          // 選択中のハイライト
+          grid.querySelectorAll('.industry-option').forEach(function (opt) {
+            opt.classList.toggle('selected', opt.querySelector('input').checked);
+          });
+        });
+      }
+
+      // 全CTAリンクにバリデーションを追加
+      document.querySelectorAll('a[href^="check.html"]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          var checked = document.querySelector('input[name="industry"]:checked');
+          if (!checked) {
+            e.preventDefault();
+            if (errorEl) errorEl.classList.remove('hidden');
+            var wrap = document.getElementById('industry-select-wrap');
+            if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+          // 業種を保存（app.js の saveIndustry）
+          if (typeof saveIndustry === 'function') {
+            saveIndustry(checked.value);
+          } else {
+            localStorage.setItem('gtn_risk_industry', checked.value);
+          }
+        });
+      });
+    })();
   </script>
 </body>
 </html>

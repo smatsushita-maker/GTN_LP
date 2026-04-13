@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <base href="/diagnosis/" />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>診断結果 | 外国人材活用戦略診断 | GTN</title>
@@ -8,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="css/style.css">
   <style>
     .result-main { opacity: 0; transition: opacity 0.5s ease; }
     .result-main.visible { opacity: 1; }
@@ -477,6 +478,31 @@
           診断結果を読み込んでいます...
         </div>
 
+        <!-- AIコメント プレースホルダー（即時表示、AI応答後にテキスト差し替え） -->
+        <div id="ai-extra-block" class="ai-extra-block" role="note" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+          <div id="ai-core-issue" class="ai-core-issue ai-card-placeholder">
+            <span class="ai-card-label">診断データに基づく分析</span>
+            <span class="ai-card-content"><span class="ai-placeholder-dot"></span> 課題を分析中...</span>
+          </div>
+          <div id="ai-risk-message" class="ai-risk-message ai-card-placeholder">
+            <span class="ai-card-label">リスク評価</span>
+            <span class="ai-card-content"><span class="ai-placeholder-dot"></span> リスクを評価中...</span>
+          </div>
+        </div>
+
+        <!-- ロック予告バナー（総評・AIカード直後、最も目立つ位置） -->
+        <div class="lock-teaser lock-teaser--prominent" role="note">
+          <div class="lock-teaser-inner js-scroll-to-gate" tabindex="0" role="button" aria-label="詳細分析を確認する">
+            <div class="lock-teaser-body">
+              <p class="lock-teaser-heading">ここから先は、貴社専用の詳細分析です</p>
+              <p class="lock-teaser-items">4軸スコア分析 ／ リスク詳細と対策 ／ 改善優先順位 ／ 専門家コメント ／ PDF完全版レポート</p>
+              <p class="lock-teaser-supplement">この分析をもとに、採用前に整えるべき設計と定着率改善の具体策が分かります。</p>
+              <span class="lock-teaser-cta-btn js-scroll-to-gate" role="button" tabindex="0">&#x1F512; 貴社専用の分析結果をすべて確認する</span>
+              <p class="lock-teaser-sub-note">入力は30秒・営業連絡は一切ありません</p>
+            </div>
+          </div>
+        </div>
+
         <!-- リスク示唆テキスト -->
         <div class="risk-hint" id="risk-hint">
           <p class="risk-hint-text" id="risk-hint-text">
@@ -573,27 +599,6 @@
         </span>
       </div>
     </div>
-
-    <!-- ③-b 次の一歩セクション -->
-    <section style="padding:32px 20px;max-width:600px;margin:0 auto;">
-      <div style="background:var(--primary-light, #eef1f8);border-radius:12px;padding:28px 24px;border:1px solid var(--border-light, #e2e8f0);">
-        <h3 style="font-size:1.05rem;font-weight:800;color:var(--primary, #1a2340);margin:0 0 16px;text-align:center;">診断結果をもとに、次に確認すべきこと</h3>
-        <ul style="list-style:none;padding:0;margin:0 0 16px;">
-          <li style="padding:10px 0;font-size:0.88rem;color:var(--text-mid, #475569);border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:flex-start;gap:8px;">
-            <span style="color:var(--cta, #d4991a);font-weight:700;flex-shrink:0;">1.</span>
-            <span><strong style="color:var(--primary, #1a2340);">自社が今すぐ確認すべきポイント</strong><br>スコアが低い軸が、離職やトラブルの発生源になりやすい領域です。完全版レポートで具体的な改善策を確認できます。</span>
-          </li>
-          <li style="padding:10px 0;font-size:0.88rem;color:var(--text-mid, #475569);border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:flex-start;gap:8px;">
-            <span style="color:var(--cta, #d4991a);font-weight:700;flex-shrink:0;">2.</span>
-            <span><strong style="color:var(--primary, #1a2340);">放置した場合に起こりやすいこと</strong><br>早期離職の連鎖、現場の疲弊、採用コストの積み上がり。設計不足のまま人数を増やすと、問題は拡大します。</span>
-          </li>
-          <li style="padding:10px 0;font-size:0.88rem;color:var(--text-mid, #475569);display:flex;align-items:flex-start;gap:8px;">
-            <span style="color:var(--cta, #d4991a);font-weight:700;flex-shrink:0;">3.</span>
-            <span><strong style="color:var(--primary, #1a2340);">無料相談で整理できること</strong><br>診断結果をもとに、御社の優先課題と具体的な改善ステップを専門家が一緒に整理します。売り込みではなく、現状把握のための60分です。</span>
-          </li>
-        </ul>
-      </div>
-    </section>
 
     <!-- ④ メインCTA + 簡易フォーム（1本化） -->
     <section class="main-gate-section" id="main-gate-section" aria-labelledby="gate-heading">
@@ -797,38 +802,34 @@
     <section class="final-consult-section hidden" id="final-consult-section" aria-labelledby="final-consult-title">
       <div class="final-consult-inner">
         <h2 class="final-consult-title" id="final-consult-title">
-          レポートで見えた課題を、<br>具体的な打ち手に変えませんか？
+          この結果をもとに、<br>何から着手すべきかを整理しませんか？
         </h2>
         <p class="final-consult-desc">
-          この60分で、以下の3つが整理されます。
+          60分の無料相談で、以下の3つが明確になります。
         </p>
-        <ul style="list-style:none;padding:0;margin:0 auto 20px;max-width:440px;text-align:left;">
-          <li style="padding:8px 0;font-size:0.9rem;color:var(--text-mid);border-bottom:1px solid var(--border-light);">
-            <strong style="color:var(--primary);">&#x2460;</strong> 貴社が最初に着手すべき改善ポイント
+        <ul style="list-style:none;padding:0 20px;margin:0 auto 20px;max-width:480px;text-align:left;">
+          <li style="padding:10px 0;font-size:0.9rem;color:rgba(255,255,255,0.85);border-bottom:1px solid rgba(255,255,255,0.12);">
+            <strong style="color:#e8b230;">&#x2460;</strong> 貴社が最初に着手すべき改善ポイント
           </li>
-          <li style="padding:8px 0;font-size:0.9rem;color:var(--text-mid);border-bottom:1px solid var(--border-light);">
-            <strong style="color:var(--primary);">&#x2461;</strong> 業種・規模に合った具体的なアクション
+          <li style="padding:10px 0;font-size:0.9rem;color:rgba(255,255,255,0.85);border-bottom:1px solid rgba(255,255,255,0.12);">
+            <strong style="color:#e8b230;">&#x2461;</strong> 業種・規模に合った具体的なアクション
           </li>
-          <li style="padding:8px 0;font-size:0.9rem;color:var(--text-mid);">
-            <strong style="color:var(--primary);">&#x2462;</strong> 3ヶ月以内に整えるべきロードマップの方向性
+          <li style="padding:10px 0;font-size:0.9rem;color:rgba(255,255,255,0.85);">
+            <strong style="color:#e8b230;">&#x2462;</strong> 3ヶ月以内に整えるべきロードマップの方向性
           </li>
         </ul>
-        <p style="font-size:0.82rem;color:var(--text-sub);margin-bottom:20px;">
+        <p style="font-size:0.82rem;color:rgba(255,255,255,0.65);margin-bottom:20px;">
           相談後に「次に何をすればいいか」が明確になった状態でお帰りいただけます。<br>
           相談後の契約や申し込みの義務はありません。
         </p>
         <a href="#" class="btn btn-cta btn-lg js-consult-link" id="cta-consult-final"
            onclick="trackEvent && trackEvent('cta_click', {cta_id:'consult_final', location:'final_consult_section'})">
-          改善アクションリストを受け取る（無料60分）
+          無料で専門家に相談する（60分）
         </a>
-        <p class="final-consult-note">無料 60分 ／ オンライン対応 ／ 秘密厳守 ／ 無理な営業なし</p>
-        <div style="max-width:400px;margin:16px auto 0;text-align:left;">
-          <p style="font-size:0.8rem;color:var(--text-sub);margin-bottom:6px;display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--cta);flex-shrink:0;">&#10003;</span> 診断結果をもとに、自社の優先課題を整理できます</p>
-          <p style="font-size:0.8rem;color:var(--text-sub);margin-bottom:6px;display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--cta);flex-shrink:0;">&#10003;</span> 受入体制と定着設計の観点から、専門家が一緒に整理します</p>
-          <p style="font-size:0.8rem;color:var(--text-sub);margin-bottom:6px;display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--cta);flex-shrink:0;">&#10003;</span> 現状共有だけでもOK。相談後の契約義務はありません</p>
-        </div>
-        <p style="font-size:0.78rem;color:var(--text-light);margin-top:12px;">
-          今すぐの予約が難しい場合は、追ってメールでもご案内します。
+        <p class="final-consult-note">無料 ／ 60分 ／ オンライン対応 ／ 秘密厳守 ／ 無理な営業なし</p>
+        <p style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:10px;line-height:1.6;">
+          何から着手すべきかを60分で整理します。<br>
+          採用前でも採用後でも相談できます。
         </p>
       </div>
     </section>
@@ -873,7 +874,7 @@
     </div>
     <div class="footer-links">
       <a href="https://globaltalent-navi.com/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
-      <a href="./terms.html">利用規約</a>
+      <a href="terms.html">利用規約</a>
       <a href="https://www.flair-staff.co.jp/" target="_blank" rel="noopener noreferrer">運営会社</a>
       <a href="https://globaltalent-navi.com/contact" target="_blank" rel="noopener noreferrer">お問い合わせ</a>
     </div>
@@ -885,7 +886,35 @@
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
           crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="./js/app.js"></script>
+  <script src="js/app.js"></script>
+  <!-- AI個別最適化（非侵襲／失敗してもUIは壊れない） -->
+  <script src="js/ai.js"></script>
+  <script src="js/render.js"></script>
+  <script>
+    // ResultPage.render() を非侵襲にラップし、描画後に /api/ai を呼ぶ。
+    // 既存ロジックには手を入れない。失敗時は既存コメントがそのまま残る。
+    (function () {
+      if (typeof ResultPage === 'undefined' || !ResultPage.render) return;
+      var _origRender = ResultPage.render.bind(ResultPage);
+      ResultPage.render = function () {
+        _origRender();
+        try {
+          if (!window.GTN_AI || !window.GTN_Render) return;
+          var payload = window.GTN_AI.buildResultPayloadFromResultPage(ResultPage);
+          window.GTN_AI.fetchResultComment(payload).then(function (r) {
+            if (r && r.ok && r.result) {
+              window.GTN_Render.renderResultComment(r.result);
+              if (typeof trackEvent === 'function') {
+                trackEvent('ai_comment_rendered', { rating: ResultPage.rating });
+              }
+            } else if (typeof trackEvent === 'function') {
+              trackEvent('ai_comment_fallback', { error: (r && r.error) || 'unknown' });
+            }
+          });
+        } catch (_) { /* 既存UIを壊さないため握りつぶす */ }
+      };
+    })();
+  </script>
   <script>
     // 結果ページ表示フォールバック
     const resultMain = document.getElementById('result-main');
