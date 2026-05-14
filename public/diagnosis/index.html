@@ -462,6 +462,16 @@
           grid.querySelectorAll('.industry-option').forEach(function (opt) {
             opt.classList.toggle('selected', opt.querySelector('input').checked);
           });
+          // Phase2: industry_selected を GA4 へ送信（選択された業種値で発火）
+          var checked = grid.querySelector('input[name="industry"]:checked');
+          if (checked && typeof trackEvent === 'function') {
+            trackEvent('industry_selected', {
+              page_id: 'diag_lp',
+              industry: checked.value,
+              source:   (typeof loadSource === 'function') ? loadSource() : '',
+              ref:      (typeof loadRef    === 'function') ? loadRef()    : '',
+            });
+          }
         });
       }
 

@@ -777,9 +777,36 @@ const ResultPage = {
     const form = document.getElementById('lead-form');
     if (!form) return;
 
+    // Phase2: form_start — 初回 focus で1度だけ発火
+    let formStarted = false;
+    form.addEventListener('focusin', () => {
+      if (formStarted) return;
+      formStarted = true;
+      trackEvent('form_start', {
+        page_id: 'diag_result',
+        source:  loadSource(),
+        ref:     loadRef(),
+        rating:  this.rating || '',
+      });
+    });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!this.validateForm(form)) return;
+      if (!this.validateForm(form)) {
+        // Phase2: form_error — 失敗フィールドごとに発火
+        const errs = this._lastValidationErrors || [];
+        errs.forEach((er) => {
+          trackEvent('form_error', {
+            page_id: 'diag_result',
+            field:   er.field,
+            reason:  er.reason,
+            source:  loadSource(),
+            ref:     loadRef(),
+            rating:  this.rating || '',
+          });
+        });
+        return;
+      }
 
       const submitBtn = form.querySelector('[type="submit"]');
       submitBtn.disabled = true;
@@ -919,6 +946,24 @@ const ResultPage = {
     //    フォーム送信前のボタン（dual-cta 等）も含め、全箇所を一括設定
     //    フォーム送信後は再度上書きされるので競合しない
     this._applyConsultLinks();
+
+    // ③ consult_click 計測 (Phase1)
+    //    .js-consult-link クリックを document 委譲で1回だけ補足
+    //    （_applyConsultLinks は複数回呼ばれるため、要素単位の addEventListener は不可）
+    const self = this;
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('.js-consult-link');
+      if (!link) return;
+      trackEvent('consult_click', {
+        page_id:  'diag_result',
+        location: link.getAttribute('data-consult-location')
+                  || link.id
+                  || 'unknown',
+        source:   loadSource(),
+        ref:      loadRef(),
+        rating:   self.rating || '',
+      });
+    });
   },
 
   /**
@@ -935,6 +980,7 @@ const ResultPage = {
 
   validateForm(form) {
     let valid = true;
+    const errors = [];
     const fields = form.querySelectorAll('[data-required]');
 
     fields.forEach(field => {
@@ -946,6 +992,7 @@ const ResultPage = {
         field.classList.add('error');
         if (errEl) { errEl.textContent = 'この項目は必須です。'; errEl.classList.add('show'); }
         valid = false;
+        errors.push({ field: field.id || field.name || 'unknown', reason: 'required' });
       }
     });
 
@@ -958,6 +1005,7 @@ const ResultPage = {
         const errEl = document.getElementById('f-email-err');
         if (errEl) { errEl.textContent = '正しいメールアドレスを入力してください。'; errEl.classList.add('show'); }
         valid = false;
+        errors.push({ field: 'f-email', reason: 'invalid_email' });
       }
     }
 
@@ -970,8 +1018,12 @@ const ResultPage = {
         const errEl = document.getElementById('f-foreign-employed-err');
         if (errEl) { errEl.textContent = 'いずれかを選択してください。'; errEl.classList.add('show'); }
         valid = false;
+        errors.push({ field: 'foreignEmployed', reason: 'required' });
       }
     }
+
+    // Phase2: 呼び出し元が form_error 発火で使えるよう、失敗内訳を保持
+    this._lastValidationErrors = errors;
 
     return valid;
   },
