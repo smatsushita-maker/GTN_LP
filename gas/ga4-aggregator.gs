@@ -993,3 +993,422 @@ function testSlackNotification() {
     { current_label: '昨日', baseline_label: '一昨日' })];
   sendSlackAlert_(fake);
 }
+
+/* =========================================================
+   Phase4: AI 週次分析レポート → Slack 投稿
+   ---------------------------------------------------------
+   毎週月曜 08:00 JST に、先週(7日)のファネルデータを集計し、
+   Claude API で解釈・改善示唆を生成して Slack に1メッセージ投稿する。
+
+   設計方針（重要）:
+     - 数値計算は全て GAS 側で実施し、AI には解釈のみ依頼
+     - 数値はそのまま Slack 数値ブロックに転記（AI出力を信用しない）
+     - AI 失敗時は fallback として「数値のみ」のレポートを投稿
+     - hallucination 防止: AI 出力は厳格 JSON schema、evidence に JSON path 必須
+     - 原データ JSON 抜粋を Slack 末尾に添付して照合可能にする
+   ========================================================= */
+
+const CLAUDE_API_KEY    = '';   // ← Anthropic API キーを設定
+const CLAUDE_MODEL      = 'claude-haiku-4-5-20251001'; // コスト最小・分析十分
+const CLAUDE_API_URL    = 'https://api.anthropic.com/v1/messages';
+const CLAUDE_MAX_TOKENS = 2000;
+
+// ---- Prompt 定数（編集はここだけで完結） ----------
+const AI_PROMPT_SYSTEM = [
+  'あなたは GTN LP（外国人雇用支援サービス）の CVR 改善を支援するシニアアナリストです。',
+  '入力された JSON データのみを根拠に週次の変化を分析し、改善優先順位を提示します。',
+  '',
+  '絶対ルール:',
+  '- 与えられた JSON データに **存在しない数値を出力しない**。',
+  '- 数値を引用するときは元 JSON のフィールドパス（例: data.totals_this_week.lead_captured）を必ず添える。',
+  '- データが不十分な場合は "データ不足" と明記する。',
+  '- 自然言語の前置き・末尾の挨拶禁止。指定の JSON 形式のみ出力する。',
+  '- LP の文脈知識: 外国人雇用診断 → リード → 無料相談予約 のファネル。source=bni/linkedin/note 等の流入別、CTA=hero/middle/final 等の位置別、結果ページで form 入力 → form_submit → lead_captured。',
+].join('\n');
+
+const AI_PROMPT_USER_TEMPLATE = [
+  '以下は GTN LP の週次ファネルデータです。',
+  '',
+  '```json',
+  '{{DATA}}',
+  '```',
+  '',
+  '次の JSON 形式で出力してください（コードブロックや前置き不要、JSON のみ）:',
+  '',
+  '{',
+  '  "summary": "今週の総評。150字以内。データから読み取れる事実ベースで。",',
+  '  "key_changes": [',
+  '    {',
+  '      "title": "短い見出し",',
+  '      "metric_path": "data 内の JSON パス",',
+  '      "value_this_week": <number or string>,',
+  '      "value_last_week": <number or string>,',
+  '      "change_pct": <number, 例 -0.42>,',
+  '      "severity": "high"|"medium"|"low",',
+  '      "likely_cause": "推定原因。データから推定できる範囲のみ。"',
+  '    }',
+  '  ],',
+  '  "improvements": [',
+  '    {',
+  '      "priority": 1,',
+  '      "action": "具体的なアクション。1〜2文。",',
+  '      "expected_impact": "期待される改善幅の方向性",',
+  '      "evidence": "data.<path> = <value> 形式で根拠を1つ以上"',
+  '    }',
+  '  ]',
+  '}',
+  '',
+  '制約: key_changes / improvements は最大3件まで。重要度の高い順に並べる。',
+].join('\n');
+
+/* ---------- エントリポイント ---------- */
+
+/**
+ * 週次 AI 分析レポートを Slack に投稿する。
+ * 月曜 08:00 JST トリガーから呼ばれる。手動実行も可。
+ */
+function runWeeklyAIReport() {
+  try {
+    if (!SLACK_WEBHOOK_URL) {
+      Logger.log('[AIWeekly] SLACK_WEBHOOK_URL 未設定: スキップ');
+      return;
+    }
+    const data = buildWeeklyData_();
+    let aiResult   = null;
+    let aiErrorMsg = null;
+    try {
+      aiResult = callClaudeAPI_(data);
+      Logger.log('[AIWeekly] AI ok: ' + Object.keys(aiResult || {}).join(','));
+    } catch (apiErr) {
+      aiErrorMsg = String(apiErr);
+      Logger.log('[AIWeekly] AI failed, fallback path: ' + aiErrorMsg);
+    }
+    const blocks = formatWeeklySlackMessage_(data, aiResult, aiErrorMsg);
+    sendWeeklySlackMessage_(blocks);
+  } catch (err) {
+    Logger.log('[AIWeekly] FATAL: ' + err + '\n' + (err && err.stack));
+  }
+}
+
+/**
+ * 月曜 08:00 JST の週次トリガー設置（多重設置防止）。
+ */
+function setupWeeklyAITrigger() {
+  ScriptApp.getProjectTriggers().forEach((t) => {
+    if (t.getHandlerFunction() === 'runWeeklyAIReport') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('runWeeklyAIReport')
+    .timeBased()
+    .everyWeeks(1)
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(8)
+    .inTimezone(TIMEZONE)
+    .create();
+  Logger.log('[AIWeekly] weekly trigger installed (Mon 08:00 ' + TIMEZONE + ')');
+}
+
+/**
+ * 手動テスト: AI レポートをその場で生成して Slack 投稿する。
+ */
+function testWeeklyAIReport() {
+  runWeeklyAIReport();
+}
+
+/* ---------- データ集計 ---------- */
+
+/**
+ * 先週/前週の全集計を JSON に詰めて返す（AI へのコンテキスト）。
+ */
+function buildWeeklyData_() {
+  const ss = getSpreadsheet_();
+  const raw     = readSheetAsObjects_(ss.getSheetByName(SHEET.RAW),      RAW_COLUMNS);
+  const cta     = readSheetAsObjects_(ss.getSheetByName(SHEET.CTA),      CTA_COLUMNS);
+  const formErr = readSheetAsObjects_(ss.getSheetByName(SHEET.FORM_ERR), FORM_ERR_COLUMNS);
+
+  const thisWk = lastNDates_(7);                                      // [yesterday..7d ago]
+  const lastWk = lastNDates_(14).filter((d) => !thisWk.includes(d));  // [8d..14d ago]
+
+  // --- 主要メトリクス合計（今週/先週） ---
+  const totalCols = [
+    'lp_view', 'cta_click', 'diag_lp_view', 'industry_selected',
+    'question_started', 'diagnosis_complete', 'result_view',
+    'form_start', 'form_submit', 'lead_captured',
+    'consult_click', 'external_link_click',
+    'scroll_25', 'scroll_50', 'scroll_75', 'scroll_100',
+  ];
+  const totalsThis = {};
+  const totalsLast = {};
+  totalCols.forEach((c) => {
+    totalsThis[c] = sumByDates_(raw, thisWk, c);
+    totalsLast[c] = sumByDates_(raw, lastWk, c);
+  });
+
+  // --- 派生CVR（今週/先週） ---
+  const rate = (tw) => ({
+    LP_to_diag_rate:        safeDiv_(tw.diag_lp_view,       tw.lp_view),
+    diag_to_question_rate:  safeDiv_(tw.industry_selected,  tw.diag_lp_view),
+    question_complete_rate: safeDiv_(tw.diagnosis_complete, tw.question_started),
+    result_to_form_rate:    safeDiv_(tw.form_start,         tw.result_view),
+    form_submit_rate:       safeDiv_(tw.lead_captured,      tw.form_start),
+    consult_rate:           safeDiv_(tw.consult_click,      tw.result_view),
+    total_cvr:              safeDiv_(tw.lead_captured,      tw.lp_view),
+  });
+  const ratesThis = rate(totalsThis);
+  const ratesLast = rate(totalsLast);
+
+  // --- source 別（今週・先週・CVR・WoW） ---
+  const sources = new Set();
+  raw.forEach((r) => { if (r.source) sources.add(r.source); });
+  const sourceBreakdown = [];
+  sources.forEach((src) => {
+    const tLp = sumByDatesAndSource_(raw, thisWk, src, 'lp_view');
+    const tLd = sumByDatesAndSource_(raw, thisWk, src, 'lead_captured');
+    const pLp = sumByDatesAndSource_(raw, lastWk, src, 'lp_view');
+    const pLd = sumByDatesAndSource_(raw, lastWk, src, 'lead_captured');
+    sourceBreakdown.push({
+      source:               src,
+      lp_view_this_week:    tLp,
+      lp_view_last_week:    pLp,
+      leads_this_week:      tLd,
+      leads_last_week:      pLd,
+      cvr_this_week:        round4_(safeDiv_(tLd, tLp)),
+      cvr_last_week:        round4_(safeDiv_(pLd, pLp)),
+      cvr_change_pct:       round4_(wow_(safeDiv_(tLd, tLp), safeDiv_(pLd, pLp))),
+    });
+  });
+
+  // --- CTA 位置別 ---
+  const locations = new Set();
+  cta.forEach((r) => { if (r.cta_location) locations.add(r.cta_location); });
+  const ctaBreakdown = [];
+  locations.forEach((loc) => {
+    const tRows = cta.filter((r) => thisWk.includes(String(r.date)) && r.cta_location === loc);
+    const pRows = cta.filter((r) => lastWk.includes(String(r.date)) && r.cta_location === loc);
+    const tClicks = tRows.reduce((a, r) => a + Number(r.clicks || 0), 0);
+    const tLeads  = tRows.reduce((a, r) => a + Number(r.downstream_leads || 0), 0);
+    const pClicks = pRows.reduce((a, r) => a + Number(r.clicks || 0), 0);
+    const pLeads  = pRows.reduce((a, r) => a + Number(r.downstream_leads || 0), 0);
+    ctaBreakdown.push({
+      cta_location:       loc,
+      clicks_this_week:   tClicks,
+      clicks_last_week:   pClicks,
+      cvr_this_week:      round4_(safeDiv_(tLeads, tClicks)),
+      cvr_last_week:      round4_(safeDiv_(pLeads, pClicks)),
+      cvr_change_pct:     round4_(wow_(safeDiv_(tLeads, tClicks), safeDiv_(pLeads, pClicks))),
+    });
+  });
+
+  // --- form_error TOP（今週、count降順） ---
+  const errAgg = {};
+  formErr.filter((r) => thisWk.includes(String(r.date))).forEach((r) => {
+    const key = (r.field || 'unknown') + '::' + (r.reason || 'unknown');
+    errAgg[key] = (errAgg[key] || 0) + Number(r.count || 0);
+  });
+  const formErrorsTop = Object.keys(errAgg)
+    .map((k) => ({ field: k.split('::')[0], reason: k.split('::')[1], count: errAgg[k] }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // --- 直近7日以内の Slack アラート（クールダウン履歴を利用） ---
+  const stored = JSON.parse(PropertiesService.getScriptProperties().getProperty(ALERT_TS_KEY) || '{}');
+  const since  = Date.now() - 7 * 24 * 3600 * 1000;
+  const activeAnomalies = Object.keys(stored)
+    .filter((k) => new Date(stored[k]).getTime() >= since)
+    .map((k) => ({ type_key: k, fired_at: stored[k] }));
+
+  return {
+    period: {
+      this_week: { start: thisWk[thisWk.length - 1], end: thisWk[0] },
+      last_week: { start: lastWk[lastWk.length - 1], end: lastWk[0] },
+    },
+    totals_this_week: totalsThis,
+    totals_last_week: totalsLast,
+    derived_rates_this_week: roundObj_(ratesThis),
+    derived_rates_last_week: roundObj_(ratesLast),
+    source_breakdown:        sourceBreakdown,
+    cta_breakdown:           ctaBreakdown,
+    form_errors_top:         formErrorsTop,
+    active_anomalies:        activeAnomalies,
+  };
+}
+
+/* ---------- Claude API 呼び出し ---------- */
+
+/**
+ * Claude API を呼んで AI 解釈を取得。失敗時は throw（呼び出し元で fallback）。
+ * @returns {Object|null} AI 出力 JSON
+ */
+function callClaudeAPI_(data) {
+  if (!CLAUDE_API_KEY) throw new Error('CLAUDE_API_KEY が未設定です');
+
+  const userPrompt = AI_PROMPT_USER_TEMPLATE.replace('{{DATA}}', JSON.stringify(data, null, 2));
+
+  const res = UrlFetchApp.fetch(CLAUDE_API_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'x-api-key':         CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    payload: JSON.stringify({
+      model:       CLAUDE_MODEL,
+      max_tokens:  CLAUDE_MAX_TOKENS,
+      system:      AI_PROMPT_SYSTEM,
+      messages:    [{ role: 'user', content: userPrompt }],
+    }),
+    muteHttpExceptions: true,
+  });
+
+  const code = res.getResponseCode();
+  if (code < 200 || code >= 300) {
+    throw new Error('Claude API HTTP ' + code + ': ' + res.getContentText().substring(0, 500));
+  }
+  const body = JSON.parse(res.getContentText());
+  const text = (body.content && body.content[0] && body.content[0].text) || '';
+  return parseAiJson_(text);
+}
+
+/**
+ * AI 応答テキストから JSON を抽出する。コードブロックで囲まれていても拾う。
+ */
+function parseAiJson_(text) {
+  if (!text) throw new Error('AI 応答が空');
+  // 素のJSONを試す
+  try { return JSON.parse(text); } catch (_) { /* fallthrough */ }
+  // ```json ... ``` ブロックを試す
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) {
+    try { return JSON.parse(fence[1]); } catch (_) { /* fallthrough */ }
+  }
+  // 最初の { から最後の } を試す
+  const first = text.indexOf('{');
+  const last  = text.lastIndexOf('}');
+  if (first >= 0 && last > first) {
+    try { return JSON.parse(text.substring(first, last + 1)); } catch (_) { /* fallthrough */ }
+  }
+  throw new Error('AI 応答を JSON としてパースできない: ' + text.substring(0, 200));
+}
+
+/* ---------- Slack メッセージ整形 ---------- */
+
+function formatWeeklySlackMessage_(data, aiResult, aiErrorMsg) {
+  const t  = data.totals_this_week;
+  const p  = data.totals_last_week;
+  const rt = data.derived_rates_this_week;
+  const rp = data.derived_rates_last_week;
+  const period = data.period;
+
+  const fmtPct = (x) => (Number(x) * 100).toFixed(1) + '%';
+  const fmtChg = (n, b) => {
+    if (!b) return 'n/a';
+    const pct = (n - b) / b * 100;
+    return (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+  };
+  const fmtPpt = (n, b) => ((n - b) * 100 >= 0 ? '+' : '') + ((n - b) * 100).toFixed(1) + 'pt';
+
+  const header = ':bar_chart: GTN LP 週次レポート (' +
+                 period.this_week.start + ' 〜 ' + period.this_week.end + ')';
+
+  const blocks = [
+    { type: 'header', text: { type: 'plain_text', text: header } },
+    { type: 'section', text: { type: 'mrkdwn', text:
+        '*── 主要数値（GASによる実測） ──*\n' +
+        '今週: lp_view *' + t.lp_view + '* / leads *' + t.lead_captured + '* / 完走率 *' + fmtPct(rt.question_complete_rate) + '* / form離脱率 *' + fmtPct(1 - rt.form_submit_rate) + '*\n' +
+        '先週: lp_view ' + p.lp_view + ' / leads ' + p.lead_captured + ' / 完走率 ' + fmtPct(rp.question_complete_rate) + ' / form離脱率 ' + fmtPct(1 - rp.form_submit_rate) + '\n' +
+        '前週比: leads *' + fmtChg(t.lead_captured, p.lead_captured) + '* / total_cvr *' + fmtChg(rt.total_cvr, rp.total_cvr) + '* / 完走率 *' + fmtPpt(rt.question_complete_rate, rp.question_complete_rate) + '*' } },
+    { type: 'divider' },
+  ];
+
+  // AI 解釈ブロック
+  if (aiResult && aiResult.summary) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text:
+      ':robot_face: *AI解釈* (Claude Haiku)\n' + aiResult.summary } });
+  } else {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text:
+      ':warning: *AI解釈は取得できませんでした*' + (aiErrorMsg ? '（' + aiErrorMsg.substring(0, 200) + '）' : '') } });
+  }
+  blocks.push({ type: 'divider' });
+
+  // 重要変化 TOP
+  if (aiResult && aiResult.key_changes && aiResult.key_changes.length) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '*── 重要変化 TOP' + aiResult.key_changes.length + ' ──*' } });
+    aiResult.key_changes.slice(0, 3).forEach((c) => {
+      const sev = c.severity === 'high' ? '🔴 *high*' : c.severity === 'medium' ? '🟠 *medium*' : '🟡 *low*';
+      const chg = typeof c.change_pct === 'number'
+        ? '  Δ ' + ((c.change_pct >= 0 ? '+' : '') + (c.change_pct * 100).toFixed(1)) + '%' : '';
+      blocks.push({ type: 'section', text: { type: 'mrkdwn', text:
+        sev + '  *' + (c.title || '(no title)') + '*\n' +
+        '`current` ' + c.value_this_week + '  →  `baseline` ' + c.value_last_week + chg + '\n' +
+        ':bulb: 推定原因: ' + (c.likely_cause || '(不明)') + '\n' +
+        ':mag: metric_path: `' + (c.metric_path || 'n/a') + '`' } });
+    });
+    blocks.push({ type: 'divider' });
+  }
+
+  // 推奨アクション
+  if (aiResult && aiResult.improvements && aiResult.improvements.length) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '*── 推奨アクション TOP' + Math.min(3, aiResult.improvements.length) + ' ──*' } });
+    aiResult.improvements.slice(0, 3).sort((a, b) => (a.priority || 99) - (b.priority || 99)).forEach((imp) => {
+      blocks.push({ type: 'section', text: { type: 'mrkdwn', text:
+        '*P' + (imp.priority || '?') + '.* ' + (imp.action || '(no action)') + '\n' +
+        ':rocket: 期待効果: ' + (imp.expected_impact || '(未記載)') + '\n' +
+        ':receipt: 根拠: `' + (imp.evidence || '(根拠なし)') + '`' } });
+    });
+    blocks.push({ type: 'divider' });
+  }
+
+  // 原データ（operator 検証用 / hallucination 照合用）
+  const sourceTop = (data.source_breakdown || [])
+    .filter((s) => s.lp_view_this_week >= 10 || s.lp_view_last_week >= 10)
+    .sort((a, b) => (b.leads_this_week || 0) - (a.leads_this_week || 0))
+    .slice(0, 5);
+  const ctaTop = (data.cta_breakdown || [])
+    .sort((a, b) => (b.clicks_this_week || 0) - (a.clicks_this_week || 0))
+    .slice(0, 7);
+  const provenance = {
+    period:               data.period,
+    totals_this_week:     data.totals_this_week,
+    totals_last_week:     data.totals_last_week,
+    rates_this_week:      data.derived_rates_this_week,
+    rates_last_week:      data.derived_rates_last_week,
+    source_top:           sourceTop,
+    cta_top:              ctaTop,
+    form_errors_top:      data.form_errors_top,
+    active_anomalies:     data.active_anomalies,
+  };
+  let provJson = JSON.stringify(provenance, null, 2);
+  if (provJson.length > 2800) provJson = provJson.substring(0, 2800) + '\n... (truncated)';
+  blocks.push({ type: 'section', text: { type: 'mrkdwn', text:
+    '*── 原データ (AI/operator 検証用) ──*\n```' + provJson + '```' } });
+
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn',
+    text: 'Phase4 AI weekly ｜ model: ' + CLAUDE_MODEL + ' ｜ prompt: AI_PROMPT_SYSTEM / AI_PROMPT_USER_TEMPLATE' }] });
+
+  return blocks;
+}
+
+function sendWeeklySlackMessage_(blocks) {
+  const payload = { text: 'GTN LP 週次レポート', blocks: blocks };
+  const res = UrlFetchApp.fetch(SLACK_WEBHOOK_URL, {
+    method:       'post',
+    contentType:  'application/json',
+    payload:      JSON.stringify(payload),
+    muteHttpExceptions: true,
+  });
+  const code = res.getResponseCode();
+  if (code >= 200 && code < 300) {
+    Logger.log('[AIWeekly] sent (HTTP ' + code + ')');
+  } else {
+    Logger.log('[AIWeekly] Slack FAILED HTTP ' + code + ' body=' + res.getContentText());
+  }
+}
+
+/* ---------- 数値ヘルパー ---------- */
+
+function round4_(n) { return Math.round(Number(n) * 10000) / 10000; }
+function wow_(curr, base) { return (Number(base) === 0) ? 0 : (Number(curr) - Number(base)) / Number(base); }
+function roundObj_(obj) {
+  const out = {};
+  Object.keys(obj).forEach((k) => { out[k] = round4_(obj[k]); });
+  return out;
+}

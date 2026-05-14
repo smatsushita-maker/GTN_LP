@@ -141,6 +141,9 @@ scroll_25, scroll_50, scroll_75, scroll_100
 | `checkAnomaliesAndNotify` | 自動 / 手動 | 異常検知 → Slack 通知（Phase3.2） |
 | `testSlackNotification` | 手動 | Webhook動作確認（ダミー1件送信） |
 | `resetAlertCooldown` | 手動 | クールダウン履歴リセット |
+| `runWeeklyAIReport` | 自動 / 手動 | 週次 AI 分析レポート → Slack（Phase4） |
+| `setupWeeklyAITrigger` | 手動初回 | 月曜 08:00 JST トリガー設置 |
+| `testWeeklyAIReport` | 手動 | 週次レポートを即時実行（動作確認用） |
 
 ## Slack 異常検知（Phase3.2）
 
@@ -183,6 +186,60 @@ scroll_25, scroll_50, scroll_75, scroll_100
 関数選択: resetAlertCooldown → 実行
 ```
 で履歴消去 → 次回 `checkAnomaliesAndNotify` から再送可能に。
+
+## AI 週次レポート（Phase4）
+
+### 概要
+毎週月曜 08:00 JST に Claude API で先週ファネルを解釈し、Slack に1メッセージ投稿する。
+
+### セットアップ
+1. Anthropic Console で API キーを発行: https://console.anthropic.com/
+2. `gas/ga4-aggregator.gs` の定数に貼り付け：
+   ```javascript
+   const CLAUDE_API_KEY = 'sk-ant-xxx...';
+   ```
+3. （任意）モデル変更:
+   ```javascript
+   const CLAUDE_MODEL = 'claude-haiku-4-5-20251001'; // デフォルト・最安
+   // 'claude-sonnet-4-6' に変えればより高品質（コスト約5倍）
+   ```
+4. `testWeeklyAIReport()` を手動実行 → Slack に届くことを確認
+5. `setupWeeklyAITrigger()` を実行 → 月曜 08:00 トリガー設置
+
+### Hallucination 防止策（多層）
+- **数値は GAS 計算値のみ Slack 数値ブロックに転記**（AI 出力は使わない）
+- **system prompt で「データに無い数値は出力するな」を強制**
+- AI 出力は厳格な **JSON schema** 指定（自然言語前置き禁止）
+- 各 improvement に `evidence` フィールド（JSON path 記述）を必須化
+- Slack 末尾に「**原データ JSON 抜粋**」を添付 → operator が AI 出力と照合可能
+
+### API 失敗時 fallback
+- `callClaudeAPI_` で例外発生 → catch → `aiResult = null`
+- Slack には数値ブロック + 「AI解釈は取得できませんでした」と表示
+- バッチ全体は止まらない
+
+### コスト試算（Claude Haiku 4.5）
+| 項目 | 値 |
+|---|---|
+| 入力トークン (1回) | 約 3,000 (data JSON + system + user) |
+| 出力トークン (1回) | 約 1,500 (key_changes 3件 + improvements 3件) |
+| 単価 | input $1/Mtok、output $5/Mtok（参考目安） |
+| 1回あたり | 約 $0.011 |
+| **月4回** | **約 $0.05 / 月** |
+| **年換算** | **約 $0.60 / 年** |
+
+### Slack 出力構成（上から）
+1. ヘッダー（日付）
+2. 主要数値（GAS 実測）
+3. AI 解釈（summary 1段落）
+4. 重要変化 TOP3（AI 出力 + GAS 数値）
+5. 推奨アクション TOP3（AI 出力 + evidence）
+6. 原データ JSON 抜粋（検証用）
+
+### Prompt の変更
+編集箇所は2定数のみで完結：
+- `AI_PROMPT_SYSTEM`: 役割と禁止事項
+- `AI_PROMPT_USER_TEMPLATE`: 出力JSON形式の指定（`{{DATA}}` プレースホルダ）
 
 ## トラブルシューティング
 
