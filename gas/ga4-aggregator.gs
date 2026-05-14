@@ -102,6 +102,9 @@ function runGA4DailyReport() {
     writeFormErrorBreakdown_(dateStr);
     updateDashboardSummary();
 
+    // Phase3.2: 異常検知 → Slack 通知（失敗してもバッチ全体は止めない）
+    checkAnomaliesAndNotify();
+
     Logger.log('[GA4Agg] done: ' + dateStr);
   } catch (err) {
     Logger.log('[GA4Agg] ERROR: ' + err + '\n' + (err && err.stack));
@@ -611,4 +614,382 @@ function safeDiv_(num, den) {
   const d = Number(den) || 0;
   if (d === 0) return 0;
   return n / d;
+}
+
+/* =========================================================
+   Phase3.2: Slack 異常検知 → 通知
+   ---------------------------------------------------------
+   検知ルール:
+     - lp_view_dod          : 前日比 -30%
+     - lp_view_wow          : 前週比 -20%
+     - question_complete    : 完走率 前週比 -20%
+     - form_error_rate      : form_error/form_start > 25%（絶対値）
+     - source_cvr           : source別 CVR 前週比 -30%
+     - cta_cvr              : CTA位置別 CVR 前週比 -30%
+   誤通知防止:
+     - 最小母数ガード（baseline が薄ければスキップ）
+     - 12時間クールダウン（PropertiesService 保存）
+     - 0除算ガード
+     - DROP のみ通知（上昇は無視）
+     - Slack失敗を catch して日次バッチを止めない
+   ========================================================= */
+
+const SLACK_WEBHOOK_URL = ''; // ← Slack Incoming Webhook URL を設定（空欄なら通知スキップ）
+
+const ANOMALY_THRESHOLDS = {
+  lp_view_dod_drop:           -0.30,  // 前日比 -30%
+  lp_view_wow_drop:           -0.20,  // 前週比 -20%
+  question_complete_drop_wow: -0.20,
+  form_error_rate_max:         0.25,  // form_error / form_start > 25%
+  source_cvr_drop_wow:        -0.30,
+  cta_cvr_drop_wow:           -0.30,
+};
+
+const ANOMALY_MIN_SAMPLE = {
+  lp_view_dod_baseline:     50,
+  lp_view_wow_baseline:    200,
+  question_started:         30,
+  form_start:               20,
+  source_lp_view_baseline:  50,
+  cta_clicks_baseline:      50,
+};
+
+const ALERT_COOLDOWN_HOURS = 12;
+const ALERT_TS_KEY = 'gtn_anomaly_last_fired'; // PropertiesService 用 JSON キー
+
+// 推定原因・推奨アクションのヒント
+const ALERT_HINTS = {
+  lp_view_dod: {
+    cause:  '広告停止 / リファラ障害 / Vercel 配信エラー / ドメイン障害',
+    action: 'GA4 リアルタイム + Vercel Logs + Search Console 緊急確認',
+  },
+  lp_view_wow: {
+    cause:  '広告予算減 / SEO順位低下 / シーズン変動 / 競合参入',
+    action: '広告管理画面 + Search Console 順位推移 + 競合動向確認',
+  },
+  question_complete: {
+    cause:  '質問数増 / UX変更 / 直近リリースで離脱増 / 設問難化',
+    action: 'GA4 探索で question_viewed の設問別ファネル離脱を確認',
+  },
+  form_error_rate: {
+    cause:  'メール正規表現 / 必須項目追加 / 入力欄ラベル不明瞭',
+    action: 'form_error_breakdown シートで field/reason TOP3 確認 → 入力例追記検討',
+  },
+  source_cvr: {
+    cause:  '紹介経路の品質劣化 / ref 設定ミス / 流入元の質変化',
+    action: 'ref パラメータ別の到達率と業種分布を GA4 探索で確認',
+  },
+  cta_cvr: {
+    cause:  'CTA文言変更 / 配置変更 / 画像/レイアウト崩れ',
+    action: '該当 cta_location の最近のコミット差分確認 → 必要なら A/B 戻し',
+  },
+};
+
+/* ---------- エントリポイント ---------- */
+
+/**
+ * 異常検知を全種類実行し、Slack に通知する。
+ * runGA4DailyReport の末尾から呼ばれる。手動実行も可。
+ */
+function checkAnomaliesAndNotify() {
+  try {
+    if (!SLACK_WEBHOOK_URL) {
+      Logger.log('[Slack] SLACK_WEBHOOK_URL 未設定: スキップ');
+      return;
+    }
+    const ss  = getSpreadsheet_();
+    const raw = readSheetAsObjects_(ss.getSheetByName(SHEET.RAW), RAW_COLUMNS);
+    const cta = readSheetAsObjects_(ss.getSheetByName(SHEET.CTA), CTA_COLUMNS);
+    const formErr = readSheetAsObjects_(ss.getSheetByName(SHEET.FORM_ERR), FORM_ERR_COLUMNS);
+
+    const alerts = [];
+    alerts.push(...detectLpViewDrop_(raw));
+    alerts.push(...detectCompleteRateDrop_(raw));
+    alerts.push(...detectFormErrorSpike_(raw, formErr));
+    alerts.push(...detectSourceCvrDrop_(raw));
+    alerts.push(...detectCtaCvrDrop_(cta));
+
+    Logger.log('[Slack] detected ' + alerts.length + ' anomalies');
+    if (alerts.length === 0) return;
+
+    const filtered = filterByCooldown_(alerts);
+    if (filtered.length === 0) {
+      Logger.log('[Slack] all alerts within cooldown, skipped');
+      return;
+    }
+
+    sendSlackAlert_(filtered);
+    recordAlertTimestamps_(filtered);
+  } catch (err) {
+    // Slackの障害でも日次バッチ全体を止めない
+    Logger.log('[Slack] anomaly check FAILED: ' + err + '\n' + (err && err.stack));
+  }
+}
+
+/* ---------- 検知ロジック ---------- */
+
+function detectLpViewDrop_(raw) {
+  const alerts = [];
+  const yesterday = dateStrDaysAgo_(1);
+  const twoDaysAgo = dateStrDaysAgo_(2);
+  const yLp = sumByDates_(raw, [yesterday],  'lp_view');
+  const dLp = sumByDates_(raw, [twoDaysAgo], 'lp_view');
+
+  // DoD
+  if (dLp >= ANOMALY_MIN_SAMPLE.lp_view_dod_baseline) {
+    const change = (yLp - dLp) / dLp;
+    if (change <= ANOMALY_THRESHOLDS.lp_view_dod_drop) {
+      alerts.push(makeAlert_('lp_view_dod', 'high',
+        'LP閲覧数 (前日比)', yLp, dLp, change,
+        { current_label: yesterday, baseline_label: twoDaysAgo }));
+    }
+  }
+
+  // WoW
+  const thisWk = lastNDates_(7);
+  const lastWk = lastNDates_(14).filter((d) => !thisWk.includes(d));
+  const tLp = sumByDates_(raw, thisWk, 'lp_view');
+  const pLp = sumByDates_(raw, lastWk, 'lp_view');
+  if (pLp >= ANOMALY_MIN_SAMPLE.lp_view_wow_baseline) {
+    const change = (tLp - pLp) / pLp;
+    if (change <= ANOMALY_THRESHOLDS.lp_view_wow_drop) {
+      alerts.push(makeAlert_('lp_view_wow', 'medium',
+        'LP閲覧数 (前週比)', tLp, pLp, change,
+        { current_label: '今週', baseline_label: '先週' }));
+    }
+  }
+  return alerts;
+}
+
+function detectCompleteRateDrop_(raw) {
+  const alerts = [];
+  const thisWk = lastNDates_(7);
+  const lastWk = lastNDates_(14).filter((d) => !thisWk.includes(d));
+
+  const tQ  = sumByDates_(raw, thisWk, 'question_started');
+  const tC  = sumByDates_(raw, thisWk, 'diagnosis_complete');
+  const pQ  = sumByDates_(raw, lastWk, 'question_started');
+  const pC  = sumByDates_(raw, lastWk, 'diagnosis_complete');
+  if (tQ < ANOMALY_MIN_SAMPLE.question_started) return alerts;
+  if (pQ === 0) return alerts;
+
+  const tRate = tC / tQ;
+  const pRate = pC / pQ;
+  if (pRate === 0) return alerts;
+  const change = (tRate - pRate) / pRate;
+  if (change <= ANOMALY_THRESHOLDS.question_complete_drop_wow) {
+    alerts.push(makeAlert_('question_complete', 'high',
+      '質問完走率 (前週比)',
+      formatPct_(tRate), formatPct_(pRate), change,
+      { current_label: '今週', baseline_label: '先週' }));
+  }
+  return alerts;
+}
+
+function detectFormErrorSpike_(raw, formErr) {
+  const alerts = [];
+  const thisWk = lastNDates_(7);
+  const fStart = sumByDates_(raw, thisWk, 'form_start');
+  if (fStart < ANOMALY_MIN_SAMPLE.form_start) return alerts;
+
+  const fErrCount = formErr
+    .filter((r) => thisWk.includes(String(r.date)))
+    .reduce((acc, r) => acc + Number(r.count || 0), 0);
+
+  const rate = fErrCount / fStart;
+  if (rate > ANOMALY_THRESHOLDS.form_error_rate_max) {
+    alerts.push(makeAlert_('form_error_rate', 'high',
+      'フォームエラー率 (今週、絶対値)',
+      formatPct_(rate),
+      formatPct_(ANOMALY_THRESHOLDS.form_error_rate_max) + ' (閾値)',
+      rate, // changeフィールド流用：絶対値そのもの
+      { current_label: '今週', baseline_label: '閾値', is_absolute: true }));
+  }
+  return alerts;
+}
+
+function detectSourceCvrDrop_(raw) {
+  const alerts = [];
+  const thisWk = lastNDates_(7);
+  const lastWk = lastNDates_(14).filter((d) => !thisWk.includes(d));
+
+  const sources = new Set();
+  raw.forEach((r) => { if (r.source) sources.add(r.source); });
+
+  sources.forEach((src) => {
+    const tLp = sumByDatesAndSource_(raw, thisWk, src, 'lp_view');
+    const tLd = sumByDatesAndSource_(raw, thisWk, src, 'lead_captured');
+    const pLp = sumByDatesAndSource_(raw, lastWk, src, 'lp_view');
+    const pLd = sumByDatesAndSource_(raw, lastWk, src, 'lead_captured');
+    if (pLp < ANOMALY_MIN_SAMPLE.source_lp_view_baseline) return;
+    const tCvr = safeDiv_(tLd, tLp);
+    const pCvr = safeDiv_(pLd, pLp);
+    if (pCvr === 0) return;
+    const change = (tCvr - pCvr) / pCvr;
+    if (change <= ANOMALY_THRESHOLDS.source_cvr_drop_wow) {
+      alerts.push(makeAlert_('source_cvr__' + src, 'medium',
+        'source CVR 急落: ' + src,
+        formatPct_(tCvr), formatPct_(pCvr), change,
+        { current_label: '今週', baseline_label: '先週', source: src }));
+    }
+  });
+  return alerts;
+}
+
+function detectCtaCvrDrop_(cta) {
+  const alerts = [];
+  const thisWk = lastNDates_(7);
+  const lastWk = lastNDates_(14).filter((d) => !thisWk.includes(d));
+
+  const locations = new Set();
+  cta.forEach((r) => { if (r.cta_location) locations.add(r.cta_location); });
+
+  locations.forEach((loc) => {
+    const tRows = cta.filter((r) => thisWk.includes(String(r.date)) && r.cta_location === loc);
+    const pRows = cta.filter((r) => lastWk.includes(String(r.date)) && r.cta_location === loc);
+    const tClicks = tRows.reduce((a, r) => a + Number(r.clicks || 0), 0);
+    const tLeads  = tRows.reduce((a, r) => a + Number(r.downstream_leads || 0), 0);
+    const pClicks = pRows.reduce((a, r) => a + Number(r.clicks || 0), 0);
+    const pLeads  = pRows.reduce((a, r) => a + Number(r.downstream_leads || 0), 0);
+    if (pClicks < ANOMALY_MIN_SAMPLE.cta_clicks_baseline) return;
+    const tCvr = safeDiv_(tLeads, tClicks);
+    const pCvr = safeDiv_(pLeads, pClicks);
+    if (pCvr === 0) return;
+    const change = (tCvr - pCvr) / pCvr;
+    if (change <= ANOMALY_THRESHOLDS.cta_cvr_drop_wow) {
+      alerts.push(makeAlert_('cta_cvr__' + loc, 'medium',
+        'CTA CVR 急落: ' + loc,
+        formatPct_(tCvr), formatPct_(pCvr), change,
+        { current_label: '今週', baseline_label: '先週', cta_location: loc }));
+    }
+  });
+  return alerts;
+}
+
+/* ---------- 共通アラート構造 ---------- */
+
+function makeAlert_(typeKey, severity, title, current, baseline, change, ctx) {
+  // typeKey 先頭セグメント（"_"以前）が hint 参照キー
+  const hintKey = typeKey.split('__')[0].replace(/_dod$|_wow$/, '');
+  const hint    = ALERT_HINTS[hintKey] || ALERT_HINTS[typeKey.split('__')[0]] ||
+                  { cause: '不明', action: 'GA4 / sheet 確認' };
+  return {
+    type_key: typeKey,   // クールダウン管理用ユニークID
+    severity: severity,  // high / medium / low
+    title:    title,
+    current:  current,
+    baseline: baseline,
+    change:   change,
+    context:  ctx || {},
+    cause:    hint.cause,
+    action:   hint.action,
+    ts:       new Date().toISOString(),
+  };
+}
+
+/* ---------- Cooldown ---------- */
+
+function filterByCooldown_(alerts) {
+  const props = PropertiesService.getScriptProperties();
+  const stored = JSON.parse(props.getProperty(ALERT_TS_KEY) || '{}');
+  const now    = Date.now();
+  const limit  = ALERT_COOLDOWN_HOURS * 3600 * 1000;
+  return alerts.filter((a) => {
+    const last = stored[a.type_key];
+    if (!last) return true;
+    return (now - new Date(last).getTime()) > limit;
+  });
+}
+
+function recordAlertTimestamps_(alerts) {
+  const props  = PropertiesService.getScriptProperties();
+  const stored = JSON.parse(props.getProperty(ALERT_TS_KEY) || '{}');
+  alerts.forEach((a) => { stored[a.type_key] = a.ts; });
+  props.setProperty(ALERT_TS_KEY, JSON.stringify(stored));
+}
+
+/**
+ * Cooldown 履歴をリセット（テスト・誤発火復旧用）
+ */
+function resetAlertCooldown() {
+  PropertiesService.getScriptProperties().deleteProperty(ALERT_TS_KEY);
+  Logger.log('[Slack] cooldown reset');
+}
+
+/* ---------- Slack 送信 ---------- */
+
+function sendSlackAlert_(alerts) {
+  const dateStr = Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-MM-dd HH:mm');
+  const hasHigh = alerts.some((a) => a.severity === 'high');
+  const header  = (hasHigh ? '🚨' : '⚠️') + ' GTN LP 異常検知 (' + dateStr + ')';
+
+  const blocks = [
+    { type: 'header', text: { type: 'plain_text', text: header } },
+    { type: 'section', text: { type: 'mrkdwn',
+        text: '*検知件数:* ' + alerts.length + ' 件\n*重要度内訳:* high=' +
+              alerts.filter((a) => a.severity === 'high').length +
+              ' / medium=' + alerts.filter((a) => a.severity === 'medium').length } },
+    { type: 'divider' },
+  ];
+
+  alerts.forEach((a) => {
+    const isAbs   = a.context && a.context.is_absolute;
+    const sevTag  = a.severity === 'high' ? '🔴 *high*' : '🟠 *medium*';
+    const deltaStr = isAbs ? ''
+      : '   Δ ' + (a.change >= 0 ? '+' : '') + (a.change * 100).toFixed(1) + '%';
+    const text =
+      sevTag + '  *' + a.title + '*\n' +
+      '`current` ' + a.current + '   →   `baseline` ' + a.baseline + deltaStr + '\n' +
+      ':bulb: *推定原因:* ' + a.cause + '\n' +
+      ':wrench: *推奨アクション:* ' + a.action;
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: text } });
+    blocks.push({ type: 'divider' });
+  });
+
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn',
+    text: 'Phase3.2 anomaly detector ｜ クールダウン ' + ALERT_COOLDOWN_HOURS + 'h ｜ 閾値変更は ANOMALY_THRESHOLDS' }] });
+
+  const payload = { text: header, blocks: blocks };
+  const res = UrlFetchApp.fetch(SLACK_WEBHOOK_URL, {
+    method:       'post',
+    contentType:  'application/json',
+    payload:      JSON.stringify(payload),
+    muteHttpExceptions: true,
+  });
+  const code = res.getResponseCode();
+  if (code >= 200 && code < 300) {
+    Logger.log('[Slack] sent ' + alerts.length + ' alerts (HTTP ' + code + ')');
+  } else {
+    Logger.log('[Slack] FAILED HTTP ' + code + ' body=' + res.getContentText());
+  }
+}
+
+/* ---------- 集計ヘルパー ---------- */
+
+function sumByDates_(raw, dates, col) {
+  return raw.filter((r) => dates.includes(String(r.date)))
+            .reduce((acc, r) => acc + Number(r[col] || 0), 0);
+}
+
+function sumByDatesAndSource_(raw, dates, source, col) {
+  return raw.filter((r) => dates.includes(String(r.date)) && r.source === source)
+            .reduce((acc, r) => acc + Number(r[col] || 0), 0);
+}
+
+function formatPct_(rate) {
+  return (Number(rate) * 100).toFixed(2) + '%';
+}
+
+/* ---------- 手動テスト ---------- */
+
+/**
+ * Webhook と通知フォーマット確認用。実データに関係なくダミー1件送信する。
+ * SLACK_WEBHOOK_URL を設定したあと一度だけ実行する想定。
+ */
+function testSlackNotification() {
+  if (!SLACK_WEBHOOK_URL) throw new Error('SLACK_WEBHOOK_URL が未設定です');
+  const fake = [makeAlert_('test_alert', 'high',
+    '[TEST] LP閲覧数 (前日比)', 120, 200, -0.40,
+    { current_label: '昨日', baseline_label: '一昨日' })];
+  sendSlackAlert_(fake);
 }

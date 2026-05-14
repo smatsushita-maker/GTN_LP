@@ -133,11 +133,56 @@ scroll_25, scroll_50, scroll_75, scroll_100
 | 関数 | 呼び出し方 | 用途 |
 |---|---|---|
 | `setupGA4Trigger` | 初回手動 | 日次トリガー設置 |
-| `runGA4DailyReport` | トリガー / 手動 | 前日分の全シート更新 |
+| `runGA4DailyReport` | トリガー / 手動 | 前日分の全シート更新 + 異常検知 |
 | `backfillRange(days)` | 手動 | 過去N日分を一括取得・上書き |
 | `ensureHeaders` | 手動 / 自動 | 5シートのヘッダ自己修復 |
 | `updateDashboardSummary` | 手動 / 自動 | サマリ再計算 |
 | `fetchGA4Report` | 内部 | GA4 Data API 共通ラッパー |
+| `checkAnomaliesAndNotify` | 自動 / 手動 | 異常検知 → Slack 通知（Phase3.2） |
+| `testSlackNotification` | 手動 | Webhook動作確認（ダミー1件送信） |
+| `resetAlertCooldown` | 手動 | クールダウン履歴リセット |
+
+## Slack 異常検知（Phase3.2）
+
+### セットアップ
+1. Slack ワークスペース → アプリ管理 → Incoming Webhook を追加
+2. 通知先チャンネルを選択 → Webhook URL をコピー
+3. `gas/ga4-aggregator.gs` 内の定数に貼り付け：
+   ```javascript
+   const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/...';
+   ```
+4. 保存後、`testSlackNotification()` を一度実行 → Slackにダミー通知が届くことを確認
+
+### 検知ルール
+
+| 検知名 | 比較 | 閾値 | 最小母数 | 重要度 |
+|---|---|---|---|---|
+| `lp_view_dod` | 昨日 vs 一昨日 | -30% | baseline ≥ 50 | 🔴 high |
+| `lp_view_wow` | 今週 vs 先週 | -20% | baseline ≥ 200 | 🟠 medium |
+| `question_complete` | 今週 vs 先週 | -20% | 今週 q_started ≥ 30 | 🔴 high |
+| `form_error_rate` | 絶対値 | > 25% (form_error / form_start) | form_start ≥ 20 | 🔴 high |
+| `source_cvr` | 今週 vs 先週 (source別) | -30% | baseline lp_view ≥ 50 | 🟠 medium |
+| `cta_cvr` | 今週 vs 先週 (CTA別) | -30% | baseline clicks ≥ 50 | 🟠 medium |
+
+閾値はすべて `ANOMALY_THRESHOLDS`、最小母数は `ANOMALY_MIN_SAMPLE` 定数で変更可。
+
+### 誤通知防止
+- **最小母数ガード**：baseline 期間の母数が薄ければスキップ
+- **12時間クールダウン**：同一 `type_key` のアラートは 12h以内に再送しない（`PropertiesService` に最終送信時刻を保存）
+- **0除算ガード**：baseline=0 はスキップ
+- **DROPのみ通知**：上昇は無視
+- **エラー封じ込め**：Slack 失敗が日次バッチを止めない
+
+### 通知タイミング
+`runGA4DailyReport` の末尾で `checkAnomaliesAndNotify` を自動呼び出し。
+毎朝 04:00 JST、集計完了直後に通知。
+
+### クールダウンのリセット
+誤閾値設定で大量通知が発生した場合：
+```
+関数選択: resetAlertCooldown → 実行
+```
+で履歴消去 → 次回 `checkAnomaliesAndNotify` から再送可能に。
 
 ## トラブルシューティング
 
