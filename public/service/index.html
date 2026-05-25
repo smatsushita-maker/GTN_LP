@@ -127,29 +127,90 @@
     </div>
   </header>
 
-  <!-- ========== Hero ========== -->
-  <section class="relative bg-navy-900 text-white pt-32 pb-20 lg:pt-40 lg:pb-24 px-4 overflow-hidden">
-    <div class="absolute inset-0 z-0 opacity-20">
-      <div class="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] rounded-full bg-gold-600 blur-[100px]"></div>
-      <div class="absolute bottom-[-10%] left-[-10%] w-[30rem] h-[30rem] rounded-full bg-blue-600 blur-[100px]"></div>
+  <!-- ========== Page Title Band ========== -->
+  <section class="bg-navy-900 text-white pt-24 lg:pt-28 pb-4 lg:pb-5 border-b-2 border-gold-500">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav aria-label="パンくず" class="text-xs mb-2">
+        <ol class="flex items-center gap-2 text-gray-400">
+          <li><a href="/" class="hover:text-white transition">TOP</a></li>
+          <li aria-hidden="true">/</li>
+          <li class="text-white font-bold" aria-current="page">サービス内容</li>
+        </ol>
+      </nav>
+      <h1 class="text-xl md:text-2xl lg:text-3xl font-bold tracking-wide">GTNの支援内容</h1>
     </div>
-    <div class="relative z-10 max-w-5xl mx-auto text-center">
-      <span class="text-gold-400 font-bold tracking-widest text-xs md:text-sm mb-5 inline-block border border-gold-400 px-3 py-1 rounded">SERVICE</span>
-      <h1 class="text-3xl md:text-4xl lg:text-5xl font-black leading-tight mb-6 tracking-tight">
-        外国人材の採用から定着・戦力化まで、<br class="hidden md:block">受け入れ体制を<span class="gradient-text">設計</span>します
-      </h1>
-      <p class="text-gray-300 text-base md:text-lg lg:text-xl mb-10 leading-relaxed max-w-4xl mx-auto font-medium">
-        GTNは、外国人材を「採用して終わり」にしないための支援サービスです。<br class="hidden md:block">採用前の設計、現場教育、生活支援、入社後フォローまで、<br class="hidden md:block">企業の受け入れ体制づくりを一気通貫でサポートします。
-      </p>
-      <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-        <a href="https://www.globaltalent-navi.com/diagnosis/" target="_blank" rel="noopener" data-cta-location="service_hero" class="pulse-btn inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-lg md:text-xl py-4 px-8 md:px-10 rounded-full shadow-2xl hover:scale-105 transition-transform duration-300">
-          <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-          60秒で無料診断する
-        </a>
-        <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0h54zS4IpXEReThZeFR4vCksZE0X5A-HBDjZcuCIi32B-jlqhecHPG1qLvr44Y9YSF_kEb_0Fo" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-full sm:w-auto bg-white text-navy-900 font-bold text-lg py-4 px-8 md:px-10 rounded-full hover:bg-gray-100 transition shadow-lg">
-          無料相談する
-        </a>
+  </section>
+
+  <!-- ========== Hero ========== -->
+  <section class="bg-gradient-to-b from-slate-100 to-white py-10 lg:py-14 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid lg:grid-cols-5 gap-8 lg:gap-12 items-center">
+        <!-- Left: Text (3/5 width on lg) -->
+        <div class="lg:col-span-3">
+          <div class="inline-flex items-center gap-3 mb-5">
+            <span class="block w-10 h-px bg-gold-500"></span>
+            <span class="text-gold-600 font-black tracking-[0.3em] text-base md:text-lg">SERVICE</span>
+            <span class="block w-10 h-px bg-gold-500"></span>
+          </div>
+          <h2 class="text-2xl md:text-3xl lg:text-4xl font-black text-navy-900 leading-tight mb-5 tracking-tight">
+            外国人材の採用から定着・戦力化まで、<br class="hidden md:block">受け入れ体制を<span class="gradient-text">設計</span>します
+          </h2>
+          <p class="text-gray-600 text-sm md:text-base lg:text-lg leading-relaxed font-medium">
+            GTNは、外国人材を「採用して終わり」にしないための支援サービスです。採用前の設計、現場教育、生活支援、入社後フォローまで、企業の受け入れ体制づくりを一気通貫でサポートします。
+          </p>
+        </div>
+        <!-- Right: Flow Diagram (2/5 width on lg) -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 md:p-7">
+            <div class="flex items-center gap-2 mb-5">
+              <span class="block w-6 h-px bg-gold-500"></span>
+              <p class="text-xs font-black text-gold-600 tracking-widest">SUPPORT FLOW</p>
+            </div>
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="flex-shrink-0 w-8 h-8 bg-navy-900 text-white rounded-full flex items-center justify-center font-bold text-sm">1</span>
+                <span class="text-sm md:text-base font-bold text-gray-900">無料診断</span>
+              </div>
+              <div class="ml-4 border-l-2 border-gray-200 h-4" aria-hidden="true"></div>
+              <div class="flex items-center gap-3">
+                <span class="flex-shrink-0 w-8 h-8 bg-navy-900 text-white rounded-full flex items-center justify-center font-bold text-sm">2</span>
+                <span class="text-sm md:text-base font-bold text-gray-900">ヒアリング</span>
+              </div>
+              <div class="ml-4 border-l-2 border-gray-200 h-4" aria-hidden="true"></div>
+              <div class="flex items-center gap-3">
+                <span class="flex-shrink-0 w-8 h-8 bg-navy-900 text-white rounded-full flex items-center justify-center font-bold text-sm">3</span>
+                <span class="text-sm md:text-base font-bold text-gray-900">課題分析</span>
+              </div>
+              <div class="ml-4 border-l-2 border-gray-200 h-4" aria-hidden="true"></div>
+              <div class="flex items-center gap-3">
+                <span class="flex-shrink-0 w-8 h-8 bg-navy-900 text-white rounded-full flex items-center justify-center font-bold text-sm">4</span>
+                <span class="text-sm md:text-base font-bold text-gray-900">3ヶ月ロードマップ作成</span>
+              </div>
+              <div class="ml-4 border-l-2 border-gray-200 h-4" aria-hidden="true"></div>
+              <div class="flex items-center gap-3">
+                <span class="flex-shrink-0 w-8 h-8 bg-gold-500 text-navy-900 rounded-full flex items-center justify-center font-bold text-sm">5</span>
+                <span class="text-sm md:text-base font-bold text-gray-900">実行支援</span>
+              </div>
+            </div>
+            <p class="mt-5 pt-4 border-t border-gray-200 text-xs text-gray-500">
+              詳細は <a href="#flow" class="text-gold-600 font-bold hover:underline">支援の流れ</a> をご覧ください
+            </p>
+          </div>
+        </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ========== CTA Strip ========== -->
+  <section class="bg-white py-8 lg:py-10 px-4 border-y border-gray-200">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-center items-center gap-4">
+      <a href="https://www.globaltalent-navi.com/diagnosis/" target="_blank" rel="noopener" data-cta-location="service_hero" class="pulse-btn inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-lg md:text-xl py-4 px-8 md:px-10 rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
+        <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        60秒で無料診断する
+      </a>
+      <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0h54zS4IpXEReThZeFR4vCksZE0X5A-HBDjZcuCIi32B-jlqhecHPG1qLvr44Y9YSF_kEb_0Fo" target="_blank" rel="noopener" class="inline-flex items-center justify-center w-full sm:w-auto bg-navy-900 text-white font-bold text-lg py-4 px-8 md:px-10 rounded-full hover:bg-navy-800 transition shadow-lg">
+        無料相談する
+      </a>
     </div>
   </section>
 
