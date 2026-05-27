@@ -413,6 +413,9 @@
     //    saveTrackingParams() は app.js で定義
     //    URL指定が最優先。未指定時は既存値を維持（初回は source='direct'）
     if (typeof saveTrackingParams !== 'undefined') saveTrackingParams();
+    // Phase3.2: utm_* / gclid を取り込み・保存（既存 attribution と並走）
+    if (typeof saveAdsParams !== 'undefined') saveAdsParams();
+    if (typeof primeSessionId !== 'undefined') primeSessionId();
 
     // ② 診断ページへのリンクに source / ref を引き継ぐ（URLパラメータ継続）
     //    diagnosis.html → check.html の遷移でパラメータが消えないようにする
@@ -448,6 +451,17 @@
     if (typeof trackEvent !== 'undefined') {
       trackEvent('page_view_lp', { source: _lpSrc || 'direct', ref: _lpRef || '' });
     }
+
+    // ④-2: Phase3.2 — Google広告計測用 click_cta 並走発火
+    //   既存インライン onclick（cta_click 発火）には触れず、document 委譲で並走
+    document.addEventListener('click', function (e) {
+      const a = e.target.closest('a#cta-hero, a#cta-bottom');
+      if (!a || typeof trackNewEvent === 'undefined') return;
+      trackNewEvent('click_cta', {
+        cta_location: a.id === 'cta-hero' ? 'diag_lp_hero' : 'diag_lp_bottom',
+        destination:  a.getAttribute('href') || '',
+      });
+    });
 
     // ⑤ 業種選択バリデーション + 保存（CTAクリック時）
     (function setupIndustryGate() {

@@ -258,6 +258,97 @@ GitHub上で以下を確認：
 
 ---
 
+## GA4 イベント発火確認方法（Phase3.2 / Google広告計測）
+
+### 追加された新規イベント（要件4種）
+
+| イベント名 | 発火タイミング | 既存併走イベント |
+|---|---|---|
+| `click_cta` | トップLP `[data-cta-location]` / 診断入口 `#cta-hero` `#cta-bottom` / 結果ページ `.js-scroll-to-form` `.js-consult-link` クリック時 | `cta_click` / `consult_click` |
+| `start_diagnosis` | `/diagnosis/check.html` 初期化時（CheckPage.init） | `page_view_check` |
+| `complete_diagnosis` | 最終問回答→結果遷移直前 | `diagnosis_complete` |
+| `submit_lead_form` | 結果ページのフォーム送信成功直後 | `form_submit` / `lead_captured` |
+
+> **既存イベントは並走発火（削除・変更なし）**。既存GA4レポート・BigQuery SQL・Looker Studio との互換性は維持。14日間の並走計測後、旧イベント停止の要否を判断。
+
+### 共通パラメータ（新規イベントのみ自動付与）
+
+| パラメータ | 取得元 |
+|---|---|
+| `page_path` | `window.location.pathname` |
+| `source` | URL `utm_source` > 既存 `source`（bni 等）> `direct` |
+| `medium` | URL `utm_medium` > 保存値 > `(none)` |
+| `campaign` | URL `utm_campaign` > 保存値 > `(none)` |
+| `gclid` | URL `gclid` 受領時に LocalStorage 保存（TTL 30日）→ 全イベントに自動付与 |
+| `session_id` | `gtag('get', ..., 'session_id', cb)` で取得しモジュールスコープにキャッシュ |
+| `diagnosis_result_type` | 該当イベント（complete/submit/結果系 click_cta）に限り rating（A/B/C/D）を付与 |
+
+### 発火確認手順
+
+#### 方法1: GA4 DebugView（推奨）
+
+1. テスト用URLにアクセス（クエリで Google広告流入を再現）：
+   ```
+   https://globaltalent-navi.com/diagnosis/?utm_source=google&utm_medium=cpc&utm_campaign=test_q1&gclid=TEST_GCLID_123&debug_mode=true
+   ```
+   > `debug_mode=true` を付けると GA4 DebugView に即時反映される
+2. [GA4 管理画面](https://analytics.google.com/) → 左メニュー「管理」→「DebugView」
+3. 診断LP表示 → 業種選択 →「無料で診断する」クリック → 10問回答 → フォーム送信、と一通り操作
+4. DebugView 上で以下イベントが時系列に並ぶことを確認：
+   - `click_cta`（業種選択後のCTAクリック）
+   - `start_diagnosis`（check.html到達）
+   - `complete_diagnosis`（最終問完了）
+   - `submit_lead_form`（フォーム送信成功）
+5. 各イベントの詳細を開き、`gclid: "TEST_GCLID_123"`, `medium: "cpc"`, `campaign: "test_q1"`, `session_id`（数値）, `page_path` がすべて付与されていることを確認
+6. `submit_lead_form` には `diagnosis_result_type: "A"` (or B/C/D) が付与されていることを確認
+
+#### 方法2: ブラウザ DevTools（即時ローカル確認）
+
+1. 上記URLでアクセス（`debug_mode` は不要）
+2. DevTools → Console で以下を実行：
+   ```js
+   // dataLayer に push された新規イベントを確認
+   window.dataLayer.filter(e => ['click_cta','start_diagnosis','complete_diagnosis','submit_lead_form'].includes(e.event));
+   ```
+3. DevTools → Network タブで `collect?v=2&tid=G-HK43N5MW3L` リクエストを検索し、`en=submit_lead_form` 等を含むリクエストの Query String に gclid / utm_* が乗っていることを確認
+4. LocalStorage 保存値の確認：
+   ```js
+   localStorage.getItem('gtn_gclid');         // → {"value":"TEST_GCLID_123","createdAt":...,"expiresAt":...}
+   localStorage.getItem('gtn_utm_source');    // → "google"
+   localStorage.getItem('gtn_utm_medium');    // → "cpc"
+   localStorage.getItem('gtn_utm_campaign');  // → "test_q1"
+   ```
+
+#### 方法3: Google Tag Assistant（Chrome拡張）
+
+1. [Tag Assistant Legacy](https://chrome.google.com/webstore/detail/tag-assistant-legacy-by-g/kejbdjndbnbjgmefkgdddjlbokphdefk) を有効化
+2. 上記URLでアクセスし全フロー実行
+3. Tag Assistant 上で `G-HK43N5MW3L` 配下に新規4イベントが記録されているか確認
+
+### Google広告コンバージョン設定（運用手順）
+
+1. GA4 管理画面 → 管理 → イベント → `submit_lead_form` を「**キーイベントとしてマーク**」
+2. （データ収集を24時間待機）
+3. Google Ads → ツールと設定 → 測定 → コンバージョン → 「新しいコンバージョンアクション」→ **「インポート」→「Googleアナリティクス4プロパティ」**
+4. `submit_lead_form` を選択 → インポート完了
+5. 以降、Google広告の入札最適化（tCPA/tROAS）と連携可能
+
+### gclid の有効期限・優先順位
+
+- **TTL: 30日**（Google広告のクリック計測標準）
+- 保存形式: `{ value, createdAt, expiresAt }` を JSON で `gtn_gclid` に保存
+- 優先順位: ① URL上の新しい gclid > ② 有効期限内の保存済み gclid > ③ 空文字
+- 期限切れは `loadGclid()` 呼び出し時に自動削除
+
+### 既存実装との独立性
+
+- 新規イベントは **`trackNewEvent()` 経由のみ**（共通 eventDispatcher）
+- 既存 `trackEvent()` には触れていない（互換維持）
+- gtag / dataLayer 両方に発火、片系障害は try/catch で吸収
+- トップLP（`public/js/main.js`）と診断LP（`public/diagnosis/js/app.js`）は CLAUDE.md 規定により完全独立 — 同等の実装を各ファイル内に閉じて持つ（意図的な重複）
+
+---
+
 ## ローカル確認方法
 
 ```bash

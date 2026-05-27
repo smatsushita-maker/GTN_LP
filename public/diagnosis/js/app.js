@@ -248,6 +248,13 @@ const STORAGE_SOURCE_KEY   = 'gtn_risk_source';     // 流入元（bni / linkedi
 const STORAGE_REF_KEY      = 'gtn_risk_ref';        // 紹介者・紹介コード（任意）
 const STORAGE_INDUSTRY_KEY = 'gtn_risk_industry';   // 業種（AI個別最適化用・スコア非影響）
 
+// Google Ads 計測用（Phase3.2 追加）— 既存 source/ref とは独立。既存 attribution を壊さない
+const STORAGE_UTM_SOURCE_KEY   = 'gtn_utm_source';
+const STORAGE_UTM_MEDIUM_KEY   = 'gtn_utm_medium';
+const STORAGE_UTM_CAMPAIGN_KEY = 'gtn_utm_campaign';
+const STORAGE_GCLID_KEY        = 'gtn_gclid';        // { value, createdAt, expiresAt } を JSON 保存
+const GCLID_TTL_MS             = 30 * 24 * 60 * 60 * 1000; // 30日
+
 /** トラッキングパラメータのストレージキー一覧（後から参照用） */
 const TRACKING_KEYS = {
   source: STORAGE_SOURCE_KEY,
@@ -301,6 +308,118 @@ function saveRef(ref) {
 
 function loadRef() {
   return localStorage.getItem(STORAGE_REF_KEY) || '';
+}
+
+/* =============================================
+   Phase3.2: Google Ads 計測 — utm_* / gclid / session_id
+   既存 source/ref とは独立。既存イベントには付与しない（互換維持）
+   ============================================= */
+
+function _setLs(key, val) {
+  if (val === undefined || val === null || val === '') return;
+  try { localStorage.setItem(key, String(val)); } catch (_) { /* quota / privacy mode */ }
+}
+function _getLs(key) {
+  try { return localStorage.getItem(key) || ''; } catch (_) { return ''; }
+}
+
+function saveUtm(source, medium, campaign) {
+  _setLs(STORAGE_UTM_SOURCE_KEY,   source);
+  _setLs(STORAGE_UTM_MEDIUM_KEY,   medium);
+  _setLs(STORAGE_UTM_CAMPAIGN_KEY, campaign);
+}
+function loadUtmSource()   { return _getLs(STORAGE_UTM_SOURCE_KEY); }
+function loadUtmMedium()   { return _getLs(STORAGE_UTM_MEDIUM_KEY); }
+function loadUtmCampaign() { return _getLs(STORAGE_UTM_CAMPAIGN_KEY); }
+
+/** gclid を TTL付きで保存（30日） */
+function saveGclid(value) {
+  if (!value) return;
+  const now = Date.now();
+  const rec = { value: String(value), createdAt: now, expiresAt: now + GCLID_TTL_MS };
+  try { localStorage.setItem(STORAGE_GCLID_KEY, JSON.stringify(rec)); } catch (_) {}
+}
+
+/** gclid を取得。期限切れなら自動削除して '' を返す */
+function loadGclid() {
+  let raw;
+  try { raw = localStorage.getItem(STORAGE_GCLID_KEY); } catch (_) { return ''; }
+  if (!raw) return '';
+  try {
+    const rec = JSON.parse(raw);
+    if (!rec || !rec.value || !rec.expiresAt) return '';
+    if (Date.now() > rec.expiresAt) {
+      try { localStorage.removeItem(STORAGE_GCLID_KEY); } catch (_) {}
+      return '';
+    }
+    return rec.value;
+  } catch (_) { return ''; }
+}
+
+/** URL から utm_* / gclid を取り込み、優先度: URL > 保存値 で永続化 */
+function saveAdsParams() {
+  const p = new URLSearchParams(window.location.search);
+  const urlSrc      = (p.get('utm_source')   || '').trim();
+  const urlMed      = (p.get('utm_medium')   || '').trim();
+  const urlCamp     = (p.get('utm_campaign') || '').trim();
+  const urlGclid    = (p.get('gclid')        || '').trim();
+
+  // utm_* は URL指定があったキーのみ上書き
+  if (urlSrc)  _setLs(STORAGE_UTM_SOURCE_KEY,   urlSrc);
+  if (urlMed)  _setLs(STORAGE_UTM_MEDIUM_KEY,   urlMed);
+  if (urlCamp) _setLs(STORAGE_UTM_CAMPAIGN_KEY, urlCamp);
+
+  // gclid: URLに新しい値があれば上書き保存（30日リセット）
+  if (urlGclid) saveGclid(urlGclid);
+}
+
+/** GA4 session_id を非同期取得してキャッシュ（gtag('get') 利用） */
+let _ga4SessionIdCache = '';
+function primeSessionId() {
+  if (_ga4SessionIdCache) return;
+  if (typeof gtag !== 'function') return;
+  try {
+    gtag('get', 'G-HK43N5MW3L', 'session_id', (id) => {
+      if (id) _ga4SessionIdCache = String(id);
+    });
+  } catch (_) { /* gtag 未ロード時は無視 */ }
+}
+function getSessionId() { return _ga4SessionIdCache; }
+
+/**
+ * 新規イベント用 共通パラメータ
+ * 既存イベントには付与しない（互換維持）
+ */
+function getCommonParams(extra) {
+  const utmSource = loadUtmSource();
+  return {
+    page_path: (window.location && window.location.pathname) || '',
+    // source は utm_source 優先、無ければ既存 source（bni 等の独自値）にフォールバック
+    source:    utmSource || loadSource() || 'direct',
+    medium:    loadUtmMedium()   || '(none)',
+    campaign:  loadUtmCampaign() || '(none)',
+    gclid:     loadGclid() || '',
+    session_id: getSessionId() || '',
+    ...(extra || {}),
+  };
+}
+
+/**
+ * 共通 eventDispatcher（重複実装禁止 — 新規イベントはこの関数経由）
+ * - gtag と dataLayer の両方に同一ペイロードを送る
+ * - 片系障害は try/catch で吸収
+ * - 既存 trackEvent には触れない（互換維持）
+ */
+function trackNewEvent(name, extraParams) {
+  const payload = getCommonParams(extraParams);
+  try {
+    if (typeof gtag === 'function') gtag('event', name, payload);
+  } catch (_) {}
+  try {
+    if (typeof window !== 'undefined' && Array.isArray(window.dataLayer)) {
+      window.dataLayer.push({ event: name, ...payload });
+    }
+  } catch (_) {}
 }
 
 /**
@@ -419,6 +538,10 @@ const CheckPage = {
   init() {
     // トラッキングパラメータ（source / ref）を保存（v2.3）
     saveTrackingParams();
+    // Phase3.2: utm_* / gclid を取り込み・保存（既存 attribution と並走）
+    saveAdsParams();
+    // GA4 session_id を非同期取得してキャッシュ
+    primeSessionId();
 
     this.answers    = loadAnswers();
     this.currentIdx = loadCurrentIndex();
@@ -434,6 +557,9 @@ const CheckPage = {
       source: loadSource(),
       ref:    loadRef(),
     });
+
+    // Phase3.2: Google広告計測用 — 診断開始
+    trackNewEvent('start_diagnosis');
   },
 
   bindEvents() {
@@ -557,10 +683,16 @@ const CheckPage = {
     } else {
       // 全問完了 → 結果ページへ
       const score = this.calcScore();
+      const rating = calcRating(score);
       trackEvent('diagnosis_complete', {
         score,
-        rating: calcRating(score),
+        rating,
         source: loadSource(),
+      });
+      // Phase3.2: Google広告計測用 — 診断完了
+      trackNewEvent('complete_diagnosis', {
+        score,
+        diagnosis_result_type: rating,
       });
       sessionStorage.setItem('gtn_risk_current', '0');
       window.location.href = 'result.html';
@@ -909,6 +1041,11 @@ const ResultPage = {
         source:  loadSource(),
         ref:     loadRef(),
       });
+      // Phase3.2: Google広告コンバージョン候補 — フォーム送信完了
+      trackNewEvent('submit_lead_form', {
+        score:                 this.score,
+        diagnosis_result_type: this.rating,
+      });
     });
   },
 
@@ -923,6 +1060,11 @@ const ResultPage = {
       if (!target) return;
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       trackEvent && trackEvent('scroll_to_form', { trigger: 'cta_click' });
+      // Phase3.2: Google広告計測用 — CTA クリック（フォーム遷移）
+      trackNewEvent('click_cta', {
+        cta_location:          'result_scroll_to_form',
+        diagnosis_result_type: this.rating || '',
+      });
     };
 
     // ① js-scroll-to-form クラスを持つすべての要素（<a>以外も含む）
@@ -954,14 +1096,20 @@ const ResultPage = {
     document.addEventListener('click', (e) => {
       const link = e.target.closest('.js-consult-link');
       if (!link) return;
+      const location = link.getAttribute('data-consult-location')
+                    || link.id
+                    || 'unknown';
       trackEvent('consult_click', {
         page_id:  'diag_result',
-        location: link.getAttribute('data-consult-location')
-                  || link.id
-                  || 'unknown',
+        location,
         source:   loadSource(),
         ref:      loadRef(),
         rating:   self.rating || '',
+      });
+      // Phase3.2: Google広告計測用 — CTA クリック（無料相談）
+      trackNewEvent('click_cta', {
+        cta_location:          'consult_' + location,
+        diagnosis_result_type: self.rating || '',
       });
     });
   },

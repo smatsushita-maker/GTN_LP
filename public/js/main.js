@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initSmoothScroll();
 
   // GA4 tracking
+  // Phase3.2: utm_* / gclid を取り込み・保存（既存 attribution と並走）
+  saveAdsParams();
+  primeSessionId();
   // Phase2: 先に href を書き換えてから cta_click を計測する順序を守る
   inheritParamsToDiagnosisLinks();
   // Phase1
@@ -176,6 +179,97 @@ function trackEvent(name, params) {
   }
 }
 
+/* ============================================================
+   Phase3.2: Google Ads 計測 — utm_* / gclid / session_id
+   既存 trackEvent には触れない（互換維持）。新規イベント専用
+   ============================================================ */
+const STORAGE_UTM_SOURCE_KEY   = 'gtn_utm_source';
+const STORAGE_UTM_MEDIUM_KEY   = 'gtn_utm_medium';
+const STORAGE_UTM_CAMPAIGN_KEY = 'gtn_utm_campaign';
+const STORAGE_GCLID_KEY        = 'gtn_gclid';
+const GCLID_TTL_MS             = 30 * 24 * 60 * 60 * 1000; // 30日
+
+function _setLs(k, v) {
+  if (!v) return;
+  try { localStorage.setItem(k, String(v)); } catch (_) {}
+}
+function _getLs(k) {
+  try { return localStorage.getItem(k) || ''; } catch (_) { return ''; }
+}
+
+function saveAdsParams() {
+  const p = new URLSearchParams(window.location.search);
+  const urlSrc   = (p.get('utm_source')   || '').trim();
+  const urlMed   = (p.get('utm_medium')   || '').trim();
+  const urlCamp  = (p.get('utm_campaign') || '').trim();
+  const urlGclid = (p.get('gclid')        || '').trim();
+  if (urlSrc)  _setLs(STORAGE_UTM_SOURCE_KEY,   urlSrc);
+  if (urlMed)  _setLs(STORAGE_UTM_MEDIUM_KEY,   urlMed);
+  if (urlCamp) _setLs(STORAGE_UTM_CAMPAIGN_KEY, urlCamp);
+  if (urlGclid) {
+    const now = Date.now();
+    try {
+      localStorage.setItem(STORAGE_GCLID_KEY, JSON.stringify({
+        value: urlGclid, createdAt: now, expiresAt: now + GCLID_TTL_MS,
+      }));
+    } catch (_) {}
+  }
+}
+
+function loadGclid() {
+  const raw = _getLs(STORAGE_GCLID_KEY);
+  if (!raw) return '';
+  try {
+    const rec = JSON.parse(raw);
+    if (!rec || !rec.value || !rec.expiresAt) return '';
+    if (Date.now() > rec.expiresAt) {
+      try { localStorage.removeItem(STORAGE_GCLID_KEY); } catch (_) {}
+      return '';
+    }
+    return rec.value;
+  } catch (_) { return ''; }
+}
+
+let _ga4SessionIdCache = '';
+function primeSessionId() {
+  if (_ga4SessionIdCache || typeof gtag !== 'function') return;
+  try {
+    gtag('get', 'G-HK43N5MW3L', 'session_id', (id) => {
+      if (id) _ga4SessionIdCache = String(id);
+    });
+  } catch (_) {}
+}
+
+function getCommonParams(extra) {
+  const utmSrc = _getLs(STORAGE_UTM_SOURCE_KEY);
+  // トップLP既存 source は URLパラメータから取得（getTrackingParams）
+  const legacy = (function () {
+    try { return getTrackingParams().source; } catch (_) { return 'direct'; }
+  })();
+  return {
+    page_path:  (window.location && window.location.pathname) || '',
+    source:     utmSrc || legacy || 'direct',
+    medium:     _getLs(STORAGE_UTM_MEDIUM_KEY)   || '(none)',
+    campaign:   _getLs(STORAGE_UTM_CAMPAIGN_KEY) || '(none)',
+    gclid:      loadGclid() || '',
+    session_id: _ga4SessionIdCache || '',
+    ...(extra || {}),
+  };
+}
+
+/** 共通 eventDispatcher（gtag + dataLayer 両方、片系障害を吸収） */
+function trackNewEvent(name, extraParams) {
+  const payload = getCommonParams(extraParams);
+  try {
+    if (typeof gtag === 'function') gtag('event', name, payload);
+  } catch (_) {}
+  try {
+    if (typeof window !== 'undefined' && Array.isArray(window.dataLayer)) {
+      window.dataLayer.push({ event: name, ...payload });
+    }
+  } catch (_) {}
+}
+
 function initLpView() {
   const { source, ref } = getTrackingParams();
   trackEvent('lp_view', {
@@ -196,6 +290,11 @@ function initCtaTracking() {
       destination:  el.getAttribute('href') || '',
       source,
       ref,
+    });
+    // Phase3.2: Google広告計測用 — click_cta 並走発火
+    trackNewEvent('click_cta', {
+      cta_location: el.getAttribute('data-cta-location') || '',
+      destination:  el.getAttribute('href') || '',
     });
   });
 }
