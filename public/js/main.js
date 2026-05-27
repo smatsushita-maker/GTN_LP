@@ -257,7 +257,8 @@ function getCommonParams(extra) {
   };
 }
 
-/** 共通 eventDispatcher（gtag + dataLayer 両方、片系障害を吸収） */
+/** 共通 eventDispatcher（gtag + dataLayer 両方、片系障害を吸収＋クロスページログ） */
+const STORAGE_EVENT_LOG_KEY = 'gtn_event_log';
 function trackNewEvent(name, extraParams) {
   const payload = getCommonParams(extraParams);
   try {
@@ -267,6 +268,14 @@ function trackNewEvent(name, extraParams) {
     if (typeof window !== 'undefined' && Array.isArray(window.dataLayer)) {
       window.dataLayer.push({ event: name, ...payload });
     }
+  } catch (_) {}
+  // クロスページ検証用ログ（sessionStorage）— DevToolsで即時確認可能
+  try {
+    const raw = sessionStorage.getItem(STORAGE_EVENT_LOG_KEY);
+    const log = raw ? JSON.parse(raw) : [];
+    log.push({ name, ts: Date.now(), ...payload });
+    if (log.length > 50) log.splice(0, log.length - 50);
+    sessionStorage.setItem(STORAGE_EVENT_LOG_KEY, JSON.stringify(log));
   } catch (_) {}
 }
 

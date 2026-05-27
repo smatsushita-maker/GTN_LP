@@ -408,8 +408,10 @@ function getCommonParams(extra) {
  * 共通 eventDispatcher（重複実装禁止 — 新規イベントはこの関数経由）
  * - gtag と dataLayer の両方に同一ペイロードを送る
  * - 片系障害は try/catch で吸収
+ * - sessionStorage にクロスページのイベントログを記録（検証用、最大50件）
  * - 既存 trackEvent には触れない（互換維持）
  */
+const STORAGE_EVENT_LOG_KEY = 'gtn_event_log';
 function trackNewEvent(name, extraParams) {
   const payload = getCommonParams(extraParams);
   try {
@@ -419,6 +421,14 @@ function trackNewEvent(name, extraParams) {
     if (typeof window !== 'undefined' && Array.isArray(window.dataLayer)) {
       window.dataLayer.push({ event: name, ...payload });
     }
+  } catch (_) {}
+  // クロスページ検証用ログ（sessionStorage）— DebugViewでも見えるが、開発者がDevToolsで即時確認できるように
+  try {
+    const raw = sessionStorage.getItem(STORAGE_EVENT_LOG_KEY);
+    const log = raw ? JSON.parse(raw) : [];
+    log.push({ name, ts: Date.now(), ...payload });
+    if (log.length > 50) log.splice(0, log.length - 50);
+    sessionStorage.setItem(STORAGE_EVENT_LOG_KEY, JSON.stringify(log));
   } catch (_) {}
 }
 
@@ -542,6 +552,8 @@ const CheckPage = {
     saveAdsParams();
     // GA4 session_id を非同期取得してキャッシュ
     primeSessionId();
+    // 新規診断セッション開始時に complete_diagnosis 保険発火フラグをクリア
+    try { sessionStorage.removeItem('gtn_complete_fired_for'); } catch (_) {}
 
     this.answers    = loadAnswers();
     this.currentIdx = loadCurrentIndex();
@@ -694,6 +706,9 @@ const CheckPage = {
         score,
         diagnosis_result_type: rating,
       });
+      // 同一診断での result.html 保険発火を抑止するためのフラグ
+      // 値は完了スコア。新たな診断開始時（CheckPage.init / clearAnswers）でクリア
+      try { sessionStorage.setItem('gtn_complete_fired_for', String(score)); } catch (_) {}
       sessionStorage.setItem('gtn_risk_current', '0');
       window.location.href = 'result.html';
     }
@@ -736,6 +751,28 @@ const ResultPage = {
     this.risks          = this.extractRisks();
     this.axisScores     = this.calcAxisScores();                    // v4.0
     this.companyTypeKey = getCompanyType(this.rate, this.axisScores); // v4.0
+
+    // Phase3.2: utm_* / gclid を取り込み・保存（直接URLアクセス対応）
+    if (typeof saveAdsParams === 'function')   saveAdsParams();
+    if (typeof primeSessionId === 'function')  primeSessionId();
+
+    // Phase3.2: complete_diagnosis 保険発火
+    //   CheckPage.next() 経由でのページ遷移直前発火は、ブラウザによっては
+    //   GA4 collect ビーコンが間に合わない or dataLayer がクリアされる場合がある
+    //   ※「同一診断スコアでの重複発火」は sessionStorage フラグで抑止
+    try {
+      const firedFor = sessionStorage.getItem('gtn_complete_fired_for');
+      if (firedFor !== String(this.score)) {
+        if (typeof trackNewEvent === 'function') {
+          trackNewEvent('complete_diagnosis', {
+            score:                 this.score,
+            diagnosis_result_type: this.rating,
+            fallback:              true,   // 保険発火である旨を識別可能に
+          });
+        }
+        sessionStorage.setItem('gtn_complete_fired_for', String(this.score));
+      }
+    } catch (_) { /* sessionStorage 不可環境では諦める */ }
 
     // ローディング後に描画
     // result-main を visible にしてから overlay を hide する順番で

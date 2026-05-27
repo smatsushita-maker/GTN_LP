@@ -304,20 +304,72 @@ GitHub上で以下を確認：
 
 #### 方法2: ブラウザ DevTools（即時ローカル確認）
 
-1. 上記URLでアクセス（`debug_mode` は不要）
-2. DevTools → Console で以下を実行：
-   ```js
-   // dataLayer に push された新規イベントを確認
-   window.dataLayer.filter(e => ['click_cta','start_diagnosis','complete_diagnosis','submit_lead_form'].includes(e.event));
-   ```
-3. DevTools → Network タブで `collect?v=2&tid=G-HK43N5MW3L` リクエストを検索し、`en=submit_lead_form` 等を含むリクエストの Query String に gclid / utm_* が乗っていることを確認
-4. LocalStorage 保存値の確認：
-   ```js
-   localStorage.getItem('gtn_gclid');         // → {"value":"TEST_GCLID_123","createdAt":...,"expiresAt":...}
-   localStorage.getItem('gtn_utm_source');    // → "google"
-   localStorage.getItem('gtn_utm_medium');    // → "cpc"
-   localStorage.getItem('gtn_utm_campaign');  // → "test_q1"
-   ```
+> ⚠️ **重要**: `window.dataLayer` は **ページ毎にリセット** される（ブラウザ仕様）。
+> check.html で発火した `start_diagnosis` を result.html の dataLayer で探しても見つかりません。
+> セッションを跨いだ検証には下記の **sessionStorage クロスページログ** を使用してください。
+
+##### A. 当該ページで発火したイベントを確認（per-page）
+
+それぞれのページの DevTools → Console で実行：
+
+**check.html で確認できるもの:** `start_diagnosis` / `complete_diagnosis`（最終問完了時）
+```js
+window.dataLayer.filter(e => e && ['start_diagnosis','complete_diagnosis'].includes(e.event));
+```
+
+**result.html で確認できるもの:** `complete_diagnosis`（保険発火 / `fallback:true` 付き） / `submit_lead_form`（フォーム送信後） / `click_cta`（CTAクリック後）
+```js
+window.dataLayer.filter(e => e && ['complete_diagnosis','submit_lead_form','click_cta'].includes(e.event));
+```
+
+**トップLP（/）/ 診断入口（/diagnosis/）で確認できるもの:** `click_cta`（CTAクリック後）
+```js
+window.dataLayer.filter(e => e && e.event === 'click_cta');
+```
+
+##### B. クロスページで発火履歴を一括確認（推奨）★
+
+**どのページからでも実行可能** — sessionStorage に最大50件のイベント履歴を保持しています：
+
+```js
+// 4種イベントの発火履歴（全ページ通算）
+JSON.parse(sessionStorage.getItem('gtn_event_log') || '[]')
+  .filter(e => ['click_cta','start_diagnosis','complete_diagnosis','submit_lead_form'].includes(e.name));
+
+// 全件・タイムスタンプ込み（時系列順）
+JSON.parse(sessionStorage.getItem('gtn_event_log') || '[]')
+  .map(e => ({ time: new Date(e.ts).toLocaleTimeString(), name: e.name, page: e.page_path, gclid: e.gclid, source: e.source }));
+
+// 発火フラグ確認
+sessionStorage.getItem('gtn_complete_fired_for');  // → "20" 等のスコア値 = complete_diagnosis 発火済み
+```
+
+##### C. ネットワーク送信の確認
+
+DevTools → Network タブ → `collect` でフィルタ → リクエストの `Payload`（または Query String）に以下が乗っていることを確認：
+- `en=start_diagnosis` / `en=complete_diagnosis` / `en=submit_lead_form` / `en=click_cta`
+- `ep.gclid=...` / `ep.source=...` / `ep.medium=...` / `ep.campaign=...`
+
+##### D. LocalStorage 永続値の確認
+
+```js
+JSON.parse(localStorage.getItem('gtn_gclid'));  // → {value:"TEST_GCLID_123", createdAt:..., expiresAt:...}
+localStorage.getItem('gtn_utm_source');         // → "google"
+localStorage.getItem('gtn_utm_medium');         // → "cpc"
+localStorage.getItem('gtn_utm_campaign');       // → "test_q1"
+```
+
+##### E. 通しシナリオ検証（推奨フロー）
+
+1. `sessionStorage.clear(); localStorage.clear();` を Console で実行（クリーン状態）
+2. テストURL（utm_*/gclid付き）を開く → 診断LP表示
+3. 業種選択 → 「無料で診断する」クリック → 10問回答 → 結果ページ → フォーム送信
+4. 結果ページの Console で B のコマンドを実行
+5. 以下4イベント全てが `name` フィールドで出現することを期待：
+   - `click_cta`（少なくとも1件、入口CTAクリック由来）
+   - `start_diagnosis`（1件、check.html init由来）
+   - `complete_diagnosis`（1〜2件、check.html最終問 + result.html保険発火が重複しないよう抑止）
+   - `submit_lead_form`（1件、フォーム送信由来）
 
 #### 方法3: Google Tag Assistant（Chrome拡張）
 
