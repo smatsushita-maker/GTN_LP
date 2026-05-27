@@ -356,6 +356,33 @@ function loadGclid() {
   } catch (_) { return ''; }
 }
 
+/**
+ * debug_mode の検出と永続化（GA4 DebugView 用）
+ * - URL に ?debug_mode=true|1 があれば LocalStorage に永続化（ページ遷移後も継続）
+ * - URL に ?debug_mode=off があれば LocalStorage から削除
+ * - 本番ユーザーの URL には付かないので、本番計測にはノイズが乗らない
+ */
+const STORAGE_DEBUG_MODE_KEY = 'gtn_debug_mode';
+function initDebugMode() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const v = (p.get('debug_mode') || '').toLowerCase().trim();
+    if (v === 'off' || v === 'false' || v === '0') {
+      localStorage.removeItem(STORAGE_DEBUG_MODE_KEY);
+    } else if (v === 'true' || v === '1') {
+      localStorage.setItem(STORAGE_DEBUG_MODE_KEY, 'true');
+    }
+  } catch (_) {}
+}
+function isDebugMode() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const v = (p.get('debug_mode') || '').toLowerCase().trim();
+    if (v === 'true' || v === '1') return true;
+    return localStorage.getItem(STORAGE_DEBUG_MODE_KEY) === 'true';
+  } catch (_) { return false; }
+}
+
 /** URL から utm_* / gclid を取り込み、優先度: URL > 保存値 で永続化 */
 function saveAdsParams() {
   const p = new URLSearchParams(window.location.search);
@@ -392,7 +419,7 @@ function getSessionId() { return _ga4SessionIdCache; }
  */
 function getCommonParams(extra) {
   const utmSource = loadUtmSource();
-  return {
+  const base = {
     page_path: (window.location && window.location.pathname) || '',
     // source は utm_source 優先、無ければ既存 source（bni 等の独自値）にフォールバック
     source:    utmSource || loadSource() || 'direct',
@@ -400,8 +427,11 @@ function getCommonParams(extra) {
     campaign:  loadUtmCampaign() || '(none)',
     gclid:     loadGclid() || '',
     session_id: getSessionId() || '',
-    ...(extra || {}),
   };
+  // GA4 DebugView 表示用 — URL ?debug_mode=true / LS gtn_debug_mode=true の時のみ付与
+  // 本番ユーザーには付かないので通常計測には影響しない
+  if (isDebugMode()) base.debug_mode = true;
+  return { ...base, ...(extra || {}) };
 }
 
 /**
@@ -550,6 +580,8 @@ const CheckPage = {
     saveTrackingParams();
     // Phase3.2: utm_* / gclid を取り込み・保存（既存 attribution と並走）
     saveAdsParams();
+    // Phase3.3: debug_mode を URL から検出して LS 永続化（DebugView 用）
+    initDebugMode();
     // GA4 session_id を非同期取得してキャッシュ
     primeSessionId();
     // 新規診断セッション開始時に complete_diagnosis 保険発火フラグをクリア
@@ -754,6 +786,7 @@ const ResultPage = {
 
     // Phase3.2: utm_* / gclid を取り込み・保存（直接URLアクセス対応）
     if (typeof saveAdsParams === 'function')   saveAdsParams();
+    if (typeof initDebugMode === 'function')   initDebugMode();
     if (typeof primeSessionId === 'function')  primeSessionId();
 
     // Phase3.2: complete_diagnosis 保険発火

@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // GA4 tracking
   // Phase3.2: utm_* / gclid を取り込み・保存（既存 attribution と並走）
   saveAdsParams();
+  // Phase3.3: debug_mode を URL から検出して LS 永続化（DebugView 用）
+  initDebugMode();
   primeSessionId();
   // Phase2: 先に href を書き換えてから cta_click を計測する順序を守る
   inheritParamsToDiagnosisLinks();
@@ -197,6 +199,33 @@ function _getLs(k) {
   try { return localStorage.getItem(k) || ''; } catch (_) { return ''; }
 }
 
+/**
+ * debug_mode 検出・永続化（GA4 DebugView 用）
+ * - URL ?debug_mode=true|1 → LocalStorage に保存
+ * - URL ?debug_mode=off → LocalStorage から削除
+ * - 本番ユーザーには付かないので通常計測には影響しない
+ */
+const STORAGE_DEBUG_MODE_KEY = 'gtn_debug_mode';
+function initDebugMode() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const v = (p.get('debug_mode') || '').toLowerCase().trim();
+    if (v === 'off' || v === 'false' || v === '0') {
+      localStorage.removeItem(STORAGE_DEBUG_MODE_KEY);
+    } else if (v === 'true' || v === '1') {
+      localStorage.setItem(STORAGE_DEBUG_MODE_KEY, 'true');
+    }
+  } catch (_) {}
+}
+function isDebugMode() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const v = (p.get('debug_mode') || '').toLowerCase().trim();
+    if (v === 'true' || v === '1') return true;
+    return localStorage.getItem(STORAGE_DEBUG_MODE_KEY) === 'true';
+  } catch (_) { return false; }
+}
+
 function saveAdsParams() {
   const p = new URLSearchParams(window.location.search);
   const urlSrc   = (p.get('utm_source')   || '').trim();
@@ -246,15 +275,16 @@ function getCommonParams(extra) {
   const legacy = (function () {
     try { return getTrackingParams().source; } catch (_) { return 'direct'; }
   })();
-  return {
+  const base = {
     page_path:  (window.location && window.location.pathname) || '',
     source:     utmSrc || legacy || 'direct',
     medium:     _getLs(STORAGE_UTM_MEDIUM_KEY)   || '(none)',
     campaign:   _getLs(STORAGE_UTM_CAMPAIGN_KEY) || '(none)',
     gclid:      loadGclid() || '',
     session_id: _ga4SessionIdCache || '',
-    ...(extra || {}),
   };
+  if (isDebugMode()) base.debug_mode = true;
+  return { ...base, ...(extra || {}) };
 }
 
 /** 共通 eventDispatcher（gtag + dataLayer 両方、片系障害を吸収＋クロスページログ） */

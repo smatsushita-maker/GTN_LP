@@ -415,6 +415,8 @@
     if (typeof saveTrackingParams !== 'undefined') saveTrackingParams();
     // Phase3.2: utm_* / gclid を取り込み・保存（既存 attribution と並走）
     if (typeof saveAdsParams !== 'undefined') saveAdsParams();
+    // Phase3.3: debug_mode を URL から検出して LS 永続化（DebugView 用）
+    if (typeof initDebugMode !== 'undefined') initDebugMode();
     if (typeof primeSessionId !== 'undefined') primeSessionId();
 
     // ② 診断ページへのリンクに source / ref を引き継ぐ（URLパラメータ継続）
