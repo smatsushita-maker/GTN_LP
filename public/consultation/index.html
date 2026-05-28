@@ -89,17 +89,27 @@
     }
     .nowrap { display: inline-block; white-space: nowrap; }
 
-    /* ===== Hero: スマホでもファーストビュー内にCTAが収まるよう詰める ===== */
-    .hero-section {
-      /* fixed header(80px) を差し引いてビューポートぴったりに */
-      min-height: calc(100vh - 80px);
-      display: flex;
-      align-items: center;
+    /* ===== Hero: 予約UIをファーストビュー近くに出すためコンパクト化 ===== */
+    @media (max-width: 767px) {
+      .hero-title { font-size: clamp(24px, 6.5vw, 30px); line-height: 1.4; }
+      .hero-sub  { font-size: 14px; line-height: 1.7; }
+    }
+
+    /* ===== HubSpot Meetings 埋め込み ===== */
+    .meetings-iframe-container {
+      width: 100%;
+      min-height: 720px;       /* ロード中の白画面防止・最低高さ確保 */
+    }
+    .meetings-iframe-container iframe {
+      width: 100% !important;
+      min-width: 100% !important;
+      min-height: 720px;
+      border: 0;
     }
     @media (max-width: 767px) {
-      .hero-title { font-size: clamp(26px, 7.2vw, 32px); line-height: 1.45; }
-      .hero-sub { font-size: 14px; line-height: 1.7; }
-      .hero-cta { font-size: 17px; padding: 16px 20px; min-height: 56px; }
+      /* スマホはカレンダー→時間→フォームで縦に伸びるため高さを増やす */
+      .meetings-iframe-container,
+      .meetings-iframe-container iframe { min-height: 780px; }
     }
   </style>
 </head>
@@ -130,7 +140,7 @@
   </header>
 
   <!-- ========== Hero (ファーストビュー) ========== -->
-  <section class="hero-section relative bg-navy-900 text-white pt-24 pb-12 lg:pt-28 lg:pb-20 px-4 overflow-hidden">
+  <section class="relative bg-navy-900 text-white pt-24 pb-10 lg:pt-28 lg:pb-12 px-4 overflow-hidden">
     <div class="absolute inset-0 z-0 opacity-20">
       <div class="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] rounded-full bg-gold-600 blur-[100px]"></div>
       <div class="absolute bottom-[-10%] left-[-10%] w-[30rem] h-[30rem] rounded-full bg-blue-600 blur-[100px]"></div>
@@ -145,18 +155,9 @@
         貴社に合った受け入れ方を一緒に整理します。
       </p>
 
-      <!-- メインCTA -->
+      <!-- 仕様サマリー（チップ）：CTAは置かず、直下の予約UIへ誘導 -->
       <div class="flex flex-col items-center gap-3">
-        <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0h54zS4IpXEReThZeFR4vCksZE0X5A-HBDjZcuCIi32B-jlqhecHPG1qLvr44Y9YSF_kEb_0Fo"
-           target="_blank" rel="noopener"
-           data-consult-location="consultation_hero"
-           class="hero-cta pulse-btn inline-flex items-center justify-center gap-2 bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-lg md:text-2xl py-5 px-8 md:px-14 rounded-full shadow-2xl hover:scale-105 transition-transform duration-300 w-full sm:w-auto">
-          <svg class="w-5 h-5 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-          日程を選択する
-        </a>
-
-        <!-- 仕様サマリー（チップ） -->
-        <div class="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-2 text-xs md:text-sm text-gray-300 font-bold">
+        <div class="flex flex-wrap justify-center gap-x-3 gap-y-2 text-xs md:text-sm text-gray-300 font-bold">
           <span class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full">
             <svg class="w-3.5 h-3.5 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             所要約60分
@@ -171,6 +172,19 @@
           </span>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ========== 予約（HubSpot Meetings 埋め込み・LP内で予約完結） ========== -->
+  <section id="booking" class="py-10 lg:py-14 bg-white px-4 border-b border-gray-100">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-6">
+        <span class="text-gold-600 font-bold tracking-widest text-sm mb-2 inline-block border-l-4 border-gold-500 pl-2">BOOKING</span>
+        <h2 class="text-xl md:text-2xl font-black text-navy-900 mt-2 leading-tight">ご都合の良い日時をお選びください</h2>
+        <p class="text-gray-600 mt-2 text-sm md:text-base">下記カレンダーからそのままご予約いただけます（オンライン60分・Google Meet 対応）。</p>
+      </div>
+      <!-- HubSpot Meetings 埋め込み（このページ内で予約完結） -->
+      <div class="meetings-iframe-container" data-src="https://meetings-na2.hubspot.com/suguru-matsushita?embed=true"></div>
     </div>
   </section>
 
@@ -276,21 +290,18 @@
     </div>
   </section>
 
-  <!-- ========== 下部CTA ========== -->
-  <section class="py-16 lg:py-24 bg-gradient-to-br from-navy-900 to-navy-800 text-white px-4 border-t-8 border-gold-500">
+  <!-- ========== 下部：予約UIへ戻る導線＋診断補助 ========== -->
+  <section class="py-14 lg:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white px-4 border-t-8 border-gold-500">
     <div class="max-w-3xl mx-auto text-center">
-      <h2 class="text-2xl md:text-4xl font-black mb-4 leading-tight">まずは現状を共有することから、<br class="md:hidden">始めてみませんか？</h2>
-      <p class="text-gray-300 text-base md:text-lg font-medium mb-10">オンライン60分・Google Meet 対応。<br class="md:hidden">相談後の契約義務はありません。</p>
+      <h2 class="text-2xl md:text-3xl font-black mb-4 leading-tight">まずは現状を共有することから、<br class="md:hidden">始めてみませんか？</h2>
+      <p class="text-gray-300 text-base md:text-lg font-medium mb-8">オンライン60分・Google Meet 対応。<br class="md:hidden">相談後の契約義務はありません。</p>
 
-      <div class="flex flex-col items-center gap-4">
-        <a href="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0h54zS4IpXEReThZeFR4vCksZE0X5A-HBDjZcuCIi32B-jlqhecHPG1qLvr44Y9YSF_kEb_0Fo"
-           target="_blank" rel="noopener"
-           data-consult-location="consultation_bottom"
-           class="pulse-btn inline-flex items-center justify-center gap-2 bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-lg md:text-2xl py-5 px-8 md:px-14 rounded-full shadow-[0_0_40px_rgba(245,158,11,0.4)] hover:scale-105 transition-transform duration-300 w-full sm:w-auto">
-          <svg class="w-5 h-5 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-          無料相談の日程を選択する
+      <div class="flex flex-col items-center gap-3">
+        <a href="#booking"
+           class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-base md:text-lg py-4 px-8 md:px-10 rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+          上の予約カレンダーへ
         </a>
-        <p class="text-xs text-gray-400">Google カレンダーが新しいタブで開きます</p>
       </div>
 
       <!-- 補助導線 -->
@@ -324,6 +335,9 @@
     </div>
     <div class="max-w-7xl mx-auto mt-8 text-center text-xs text-gray-600">&copy; 2024 Global Talent Navi. All rights reserved.</div>
   </footer>
+
+  <!-- HubSpot Meetings 埋め込みスクリプト -->
+  <script type="text/javascript" src="https://static.hsappstatic.net/MeetingsEmbed/ex/MeetingsEmbedCode.js"></script>
 
 </body>
 </html>
