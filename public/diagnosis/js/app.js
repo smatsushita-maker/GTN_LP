@@ -15,7 +15,7 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwCUN-cO15RF-T5-BU5zJR74FHutgnWnuP3G7Mmar4QZwEWfLSpUBoNGn4TGsxn9SJl/exec';
 
 /** 無料相談ページURL ← ここを差し替え */
-const CONSULT_URL = 'https://calendar.app.google/erJ8R63g9zWargiR9';
+const CONSULT_URL = 'https://www.globaltalent-navi.com/consultation/';
 
 /* =============================================
    診断データ
