@@ -139,18 +139,17 @@
     </div>
   </header>
 
-  <!-- ========== Hero (ファーストビュー) ========== -->
-  <section class="relative bg-navy-900 text-white pt-24 pb-10 lg:pt-28 lg:pb-12 px-4 overflow-hidden">
+  <!-- ========== Hero (コンパクト・予約ページの導入) ========== -->
+  <section class="relative bg-navy-900 text-white pt-24 pb-6 lg:pt-28 lg:pb-8 px-4 overflow-hidden">
     <div class="absolute inset-0 z-0 opacity-20">
       <div class="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] rounded-full bg-gold-600 blur-[100px]"></div>
       <div class="absolute bottom-[-10%] left-[-10%] w-[30rem] h-[30rem] rounded-full bg-blue-600 blur-[100px]"></div>
     </div>
     <div class="relative z-10 max-w-4xl mx-auto text-center w-full">
-      <span class="text-gold-400 font-bold tracking-widest text-xs md:text-sm mb-4 inline-block border border-gold-400/60 px-3 py-1 rounded">FREE CONSULTATION</span>
-      <h1 class="hero-title text-3xl md:text-5xl font-black leading-tight mb-5 md:mb-6 tracking-tight">
-        外国人材活用<br class="md:hidden"><span class="gradient-text">無料相談予約</span>
+      <h1 class="hero-title text-2xl md:text-4xl font-black leading-tight mb-3 md:mb-4 tracking-tight">
+        外国人材活用<br class="md:hidden"><span class="gradient-text">無料相談</span>
       </h1>
-      <p class="hero-sub text-gray-300 text-base md:text-lg leading-relaxed max-w-2xl mx-auto font-medium mb-7 md:mb-10">
+      <p class="hero-sub text-gray-300 text-sm md:text-base leading-relaxed max-w-2xl mx-auto font-medium mb-4 md:mb-5">
         診断結果や現在の状況をもとに、<br class="md:hidden">
         貴社に合った受け入れ方を一緒に整理します。
       </p>
@@ -176,12 +175,11 @@
   </section>
 
   <!-- ========== 予約（HubSpot Meetings 埋め込み・LP内で予約完結） ========== -->
-  <section id="booking" class="py-10 lg:py-14 bg-white px-4 border-b border-gray-100">
+  <section id="booking" class="pt-6 pb-8 lg:pt-8 lg:pb-12 bg-white px-4 border-b border-gray-100">
     <div class="max-w-3xl mx-auto">
-      <div class="text-center mb-6">
-        <span class="text-gold-600 font-bold tracking-widest text-sm mb-2 inline-block border-l-4 border-gold-500 pl-2">BOOKING</span>
-        <h2 class="text-xl md:text-2xl font-black text-navy-900 mt-2 leading-tight">ご都合の良い日時をお選びください</h2>
-        <p class="text-gray-600 mt-2 text-sm md:text-base">下記カレンダーからそのままご予約いただけます（オンライン60分・Google Meet 対応）。</p>
+      <div class="text-center mb-4">
+        <h2 class="text-xl md:text-2xl font-black text-navy-900 leading-tight">無料相談の日時を選択してください</h2>
+        <p class="text-gray-600 mt-2 text-sm md:text-base">オンライン60分 / Google Meet対応</p>
       </div>
       <!-- HubSpot Meetings 埋め込み（このページ内で予約完結） -->
       <div class="meetings-iframe-container" data-src="https://meetings-na2.hubspot.com/suguru-matsushita?embed=true"></div>
@@ -293,14 +291,14 @@
   <!-- ========== 下部：予約UIへ戻る導線＋診断補助 ========== -->
   <section class="py-14 lg:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white px-4 border-t-8 border-gold-500">
     <div class="max-w-3xl mx-auto text-center">
-      <h2 class="text-2xl md:text-3xl font-black mb-4 leading-tight">まずは現状を共有することから、<br class="md:hidden">始めてみませんか？</h2>
+      <h2 class="text-2xl md:text-3xl font-black mb-4 leading-tight">まだ予約していない方はこちら</h2>
       <p class="text-gray-300 text-base md:text-lg font-medium mb-8">オンライン60分・Google Meet 対応。<br class="md:hidden">相談後の契約義務はありません。</p>
 
       <div class="flex flex-col items-center gap-3">
         <a href="#booking"
            class="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-gold-400 to-gold-600 text-navy-900 font-black text-base md:text-lg py-4 px-8 md:px-10 rounded-full shadow-lg hover:scale-105 transition-transform duration-300">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
-          上の予約カレンダーへ
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          無料相談の日程を選択する
         </a>
       </div>
 
