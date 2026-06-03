@@ -285,6 +285,53 @@ function loadIndustry() {
   return localStorage.getItem(STORAGE_INDUSTRY_KEY) || '';
 }
 
+/* =============================================
+   診断メタ（汎用ペイロード）
+   ─────────────────────────────────────────────
+   採点に絡まない「診断中に取得した付帯情報」を
+   キー・バリューの集合で保持する。立場(role)が初出。
+   将来 timeline 等を足す場合は META_QUESTIONS に1定義を
+   追加し、HubSpot側プロパティ＋GASのマッピングを足すだけで拡張可能。
+   採点用 answers（gtn_risk_answers）とは完全に分離する。
+   ============================================= */
+
+const STORAGE_META_KEY = 'gtn_risk_meta';   // { role: 'executive', ... }
+
+/**
+ * メタ設問定義（QUESTIONS とは別管理・スコア非影響）
+ * key   : ペイロード/HubSpotマッピングで使う安定キー
+ * value : HubSpotに渡す内部値（表示文言と分離）
+ */
+const META_QUESTIONS = [
+  {
+    key: 'role',
+    required: true,
+    label: '立場',
+    text: 'より精度の高い分析結果をお出しするため、あなたの立場を教えてください',
+    options: [
+      { value: 'executive',    text: '経営者・役員' },
+      { value: 'hr',           text: '人事・採用担当' },
+      { value: 'site_manager', text: '現場責任者' },
+      { value: 'other',        text: 'その他' },
+    ],
+  },
+];
+
+/** メタ集合を保存（オブジェクト丸ごと） */
+function saveMeta(meta) {
+  try { localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta || {})); } catch (_) {}
+}
+/** メタ集合を読み込む（失敗時は空オブジェクト — 送信ブロックしない） */
+function loadMeta() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_META_KEY)) || {};
+  } catch { return {}; }
+}
+/** メタ集合をクリア（送信完了時に呼ぶ — 別セッションへの混入防止） */
+function clearMeta() {
+  try { localStorage.removeItem(STORAGE_META_KEY); } catch (_) {}
+}
+
 function saveCurrentIndex(idx) {
   sessionStorage.setItem('gtn_risk_current', String(idx));
 }
@@ -574,6 +621,9 @@ const CheckPage = {
   currentIdx: 0,
   viewedQuestions: {},  // QA: question_viewed 重複発火防止用
   _autoAdvanceTimer: null,  // UX: 自動遷移タイマーID
+  phase: 'questions',   // 'questions' | 'meta'（立場などのメタ設問）
+  meta: {},             // 診断メタ集合（gtn_risk_meta と同期）
+  metaIdx: 0,           // META_QUESTIONS 内の現在位置
 
   init() {
     // トラッキングパラメータ（source / ref）を保存（v2.3）
@@ -589,6 +639,9 @@ const CheckPage = {
 
     this.answers    = loadAnswers();
     this.currentIdx = loadCurrentIndex();
+    this.meta       = loadMeta();
+    this.phase      = 'questions';
+    this.metaIdx    = 0;
 
     // インデックスが範囲外ならリセット
     if (this.currentIdx >= QUESTIONS.length) this.currentIdx = 0;
@@ -661,8 +714,14 @@ const CheckPage = {
     prevBtn.disabled = this.currentIdx === 0;
 
     if (isLast) {
-      nextBtn.textContent = '結果を見る →';
-      nextBtn.className   = 'btn-finish';
+      // 立場などのメタ設問が後続にある場合は、まだ結果に飛ばさず「次へ」
+      if (META_QUESTIONS.length > 0) {
+        nextBtn.textContent = '次へ →';
+        nextBtn.className   = 'btn-next-q';
+      } else {
+        nextBtn.textContent = '結果を見る →';
+        nextBtn.className   = 'btn-finish';
+      }
     } else {
       nextBtn.textContent = '次の質問へ →';
       nextBtn.className   = 'btn-next-q';
@@ -708,6 +767,17 @@ const CheckPage = {
   },
 
   prev() {
+    // 立場フェーズ：先頭メタなら質問フェーズ（最終問）へ戻る
+    if (this.phase === 'meta') {
+      if (this.metaIdx > 0) {
+        this.metaIdx--;
+        this.renderMeta();
+      } else {
+        this.phase = 'questions';
+        this.render();
+      }
+      return;
+    }
     if (this.currentIdx > 0) {
       clearTimeout(this._autoAdvanceTimer);  // UX: 自動遷移キャンセル
       this.currentIdx--;
@@ -717,6 +787,9 @@ const CheckPage = {
   },
 
   next() {
+    // 立場フェーズ中は専用ハンドラへ
+    if (this.phase === 'meta') return this.nextMeta();
+
     const q = QUESTIONS[this.currentIdx];
     if (!this.answers[q.id]) return;
 
@@ -725,25 +798,115 @@ const CheckPage = {
       saveCurrentIndex(this.currentIdx);
       this.render();
     } else {
-      // 全問完了 → 結果ページへ
-      const score = this.calcScore();
-      const rating = calcRating(score);
-      trackEvent('diagnosis_complete', {
-        score,
-        rating,
-        source: loadSource(),
-      });
-      // Phase3.2: Google広告計測用 — 診断完了
-      trackNewEvent('complete_diagnosis', {
-        score,
-        diagnosis_result_type: rating,
-      });
-      // 同一診断での result.html 保険発火を抑止するためのフラグ
-      // 値は完了スコア。新たな診断開始時（CheckPage.init / clearAnswers）でクリア
-      try { sessionStorage.setItem('gtn_complete_fired_for', String(score)); } catch (_) {}
-      sessionStorage.setItem('gtn_risk_current', '0');
-      window.location.href = 'result.html';
+      // 全問完了 → 立場などのメタ設問があれば先にメタフェーズへ（結果表示直前）
+      if (META_QUESTIONS.length > 0) {
+        this.enterMetaPhase();
+      } else {
+        this.goToResult();
+      }
     }
+  },
+
+  /* ---- 立場（メタ設問）フェーズ ---- */
+  enterMetaPhase() {
+    clearTimeout(this._autoAdvanceTimer);  // 自動遷移が残っていれば解除
+    this.phase   = 'meta';
+    this.metaIdx = 0;
+    this.renderMeta();
+  },
+
+  renderMeta() {
+    const m = META_QUESTIONS[this.metaIdx];
+
+    // 全質問回答済みなのでプログレスは100%
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('progress-label').textContent = '最後の質問';
+    const pctEl = document.getElementById('progress-count');
+    if (pctEl) pctEl.textContent = '100% 完了';
+
+    document.getElementById('q-label').textContent = m.label || '';
+    document.getElementById('q-text').textContent  = m.text;
+
+    // 選択肢描画（値ベース・バッジなし）
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    m.options.forEach((opt) => {
+      const selected = this.meta[m.key] === opt.value;
+      const item = document.createElement('div');
+      item.className = 'option-item';
+      item.innerHTML = `
+        <input type="radio" name="meta_${m.key}" id="meta_${m.key}_${opt.value}"
+               value="${opt.value}" ${selected ? 'checked' : ''}>
+        <label class="option-label" for="meta_${m.key}_${opt.value}">
+          <span>${opt.text}</span>
+        </label>
+      `;
+      container.appendChild(item);
+    });
+    container.querySelectorAll('input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => this.onMetaSelect(m.key, radio.value));
+    });
+
+    // ボタン状態
+    const prevBtn = document.getElementById('btn-prev');
+    const nextBtn = document.getElementById('btn-next');
+    prevBtn.disabled = false;  // 質問フェーズへ戻れる
+    nextBtn.textContent = '結果を見る →';
+    nextBtn.className   = 'btn-finish';
+    // 必須なら未選択時は進めない
+    nextBtn.disabled = m.required ? (this.meta[m.key] === undefined) : false;
+
+    // フェードアニメーション
+    const card = document.getElementById('question-card');
+    card.classList.remove('fade-up');
+    void card.offsetWidth;
+    card.classList.add('fade-up');
+  },
+
+  onMetaSelect(key, value) {
+    this.meta[key] = value;
+    saveMeta(this.meta);
+    document.getElementById('btn-next').disabled = false;
+    // 任意計測（既存イベントと並走・互換維持）
+    trackEvent('meta_answered', {
+      meta_key:   key,
+      meta_value: value,
+      source:     loadSource(),
+    });
+  },
+
+  nextMeta() {
+    const m = META_QUESTIONS[this.metaIdx];
+    // 必須ガード（未選択では進めない）
+    if (m.required && this.meta[m.key] === undefined) return;
+
+    if (this.metaIdx < META_QUESTIONS.length - 1) {
+      this.metaIdx++;
+      this.renderMeta();
+    } else {
+      this.goToResult();
+    }
+  },
+
+  /** 全問＋メタ完了 → 結果ページへ（完了計測は従来どおりここで発火） */
+  goToResult() {
+    const score = this.calcScore();
+    const rating = calcRating(score);
+    trackEvent('diagnosis_complete', {
+      score,
+      rating,
+      source: loadSource(),
+    });
+    // Phase3.2: Google広告計測用 — 診断完了
+    trackNewEvent('complete_diagnosis', {
+      score,
+      diagnosis_result_type: rating,
+    });
+    // 同一診断での result.html 保険発火を抑止するためのフラグ
+    // 値は完了スコア。新たな診断開始時（CheckPage.init / clearAnswers）でクリア
+    try { sessionStorage.setItem('gtn_complete_fired_for', String(score)); } catch (_) {}
+    sessionStorage.setItem('gtn_risk_current', '0');
+    window.location.href = 'result.html';
   },
 
   calcScore() {
@@ -1026,6 +1189,11 @@ const ResultPage = {
 
       console.log('[GTN] sendToGAS 処理完了');
 
+      // 診断メタ（立場 role 等）は送信完了後に必ずクリアする。
+      // 前回セッションの古い立場が、別人/別セッションの送信に混入するのを防ぐ（4-2 / 6-2）。
+      // ※ payload には送信前に meta を取り込み済みのため、ここでのクリアは送信値に影響しない。
+      clearMeta();
+
       // フォームを非表示にしてサンクス表示（v6.0: gate-form-wrap）
       const formWrap = document.getElementById('gate-form-wrap') || document.getElementById('form-body');
       if (formWrap) formWrap.style.display = 'none';
@@ -1266,9 +1434,14 @@ const ResultPage = {
   buildPayload(formData) {
     const answerLabels = QUESTIONS.map(q => this.answers[q.id] || '未回答');
     const ax = this.axisScores || {};
+    // 診断メタ（立場 role など）を汎用集合としてまとめて同梱。
+    // 取得失敗・空でも {} となり送信はブロックしない（4-1）。
+    // 将来 timeline 等を足す場合も META_QUESTIONS に定義を足すだけで自動的にここへ乗る。
+    const meta = (typeof loadMeta === 'function') ? loadMeta() : {};
     return {
       timestamp:        new Date().toISOString(),
       variant:          'new',  // v6.0: A/Bテスト用識別子
+      meta:             meta,   // { role: 'executive', ... } — GAS側でHubSpotプロパティへマッピング
       score:            this.score,
       rate:             this.rate,
       rating:           this.rating,

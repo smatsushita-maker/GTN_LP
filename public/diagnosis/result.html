@@ -649,13 +649,16 @@
               <p class="form-error-msg" id="f-email-err" role="alert"></p>
             </div>
 
-            <!-- ===== v6.0: 以下はCVR検証後に復活可能 ===== -->
-            <!--
+            <!-- お名前：任意（必須項目の後に配置・未入力でも送信可） -->
             <div class="form-field">
-              <label class="form-label" for="f-name">お名前<span class="form-required">必須</span></label>
-              <input class="form-input" type="text" id="f-name" name="name" placeholder="山田 太郎" autocomplete="name" data-required>
+              <label class="form-label" for="f-name">お名前<span class="form-optional">任意</span></label>
+              <input class="form-input" type="text" id="f-name" name="name"
+                     placeholder="山田 太郎" autocomplete="name">
               <p class="form-error-msg" id="f-name-err" role="alert"></p>
             </div>
+
+            <!-- ===== v6.0: 以下はCVR検証後に復活可能（お名前は上で任意項目として復活済み） ===== -->
+            <!--
             <div class="form-field">
               <label class="form-label" for="f-phone">電話番号<span class="form-optional">任意</span></label>
               <input class="form-input" type="tel" id="f-phone" name="phone" placeholder="03-0000-0000" autocomplete="tel">
