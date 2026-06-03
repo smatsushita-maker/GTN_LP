@@ -2272,7 +2272,7 @@ ResultPage.buildReportHTML = function (formData) {
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
           <span style="font-size:15px;">${info.icon}</span>
           <span style="font-size:12px;font-weight:700;color:${info.color};">${info.label}</span>
-          ${isWeakest ? `<span style="font-size:10px;font-weight:700;background:${barColor};color:white;padding:2px 7px;border-radius:10px;margin-left:auto;">優先改善</span>` : ''}
+          ${isWeakest ? `<span style="font-size:10px;font-weight:700;background:${barColor};color:white;padding:2px 7px;border-radius:10px;margin-left:auto;line-height:1;display:inline-flex;align-items:center;">優先改善</span>` : ''}
         </div>
         <div style="font-size:10px;color:#6b7280;margin-bottom:7px;">${info.desc}</div>
         <div style="height:9px;background:#e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:4px;">
@@ -2550,7 +2550,7 @@ ResultPage.buildReportHTML = function (formData) {
     <div style="padding-top:13px;border-top:1px solid #e5e7eb;
                 font-size:10px;color:#9ca3af;text-align:center;line-height:1.7;">
       本レポートは Global Talent Navi（GTN）の分析モデルをもとに企業別に自動生成されたものです。<br>
-      株式会社フレアスタッフ / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
+      株式会社フレアー / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
       プライバシーポリシー: https://globaltalent-navi.com/privacy
     </div>
   </div>
@@ -2676,7 +2676,8 @@ ResultPage.generatePDF = async function (formData) {
       pdf.setPage(p);
       pdf.setFontSize(8);
       pdf.setTextColor(160, 160, 160);
-      pdf.text('GTN 外国人材活用戦略診断レポート', 10, pageH - 5);
+      // jsPDF 標準フォントは日本語非対応のため、ページ脚注は英字表記にして文字化けを回避
+      pdf.text('GTN Diagnosis Report', 10, pageH - 5);
       pdf.text(`${p} / ${totalPages}`, pageW - 18, pageH - 5);
     }
 
