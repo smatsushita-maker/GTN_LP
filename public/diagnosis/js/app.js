@@ -1219,7 +1219,7 @@ const ResultPage = {
       this.renderPeerComparison();
       this.renderCrisisBlock();
 
-      // 「外国人材活用研究所とは」をCTA導線途中から除外（v5.3）
+      // 「Global Talent Navi（GTN）とは」信頼ブロックをCTA導線途中から除外（v5.3）
       const trustSection = document.getElementById('trust-section');
       if (trustSection) trustSection.classList.add('hidden');
 
@@ -1255,6 +1255,24 @@ const ResultPage = {
             if (genMsg) genMsg.classList.add('hidden');
           }
         });
+      }
+
+      // ① フォーム送信と同時にPDFを自動ダウンロード（ダウンロードし忘れ防止）
+      //   ・jsPDF/html2canvas が揃っている時のみ自動実行（未ロード時に印刷ウィンドウが
+      //     勝手に開くのを避けるため、フォールバックの自動起動はしない）
+      //   ・失敗してもサンクス表示・以降の処理は止めない（付帯処理）
+      //   ・手動の「PDFをダウンロードする」ボタンは再ダウンロード用に引き続き有効
+      if (typeof window.jspdf !== 'undefined' && typeof html2canvas !== 'undefined') {
+        const autoGenMsg = document.getElementById('pdf-generating-msg');
+        if (autoGenMsg) autoGenMsg.classList.remove('hidden');
+        if (pdfBtn) { pdfBtn.disabled = true; pdfBtn.textContent = 'PDF生成中...'; }
+        trackEvent('pdf_download', { rating: this.rating, score: this.score, source: loadSource(), trigger: 'auto' });
+        Promise.resolve(this.generatePDF(formData))
+          .catch((err) => console.error('[GTN] PDF自動生成エラー:', err))
+          .finally(() => {
+            if (autoGenMsg) autoGenMsg.classList.add('hidden');
+            if (pdfBtn) { pdfBtn.disabled = false; pdfBtn.textContent = '📥 PDFをダウンロードする'; }
+          });
       }
 
       // PDF セクションまでスクロール
@@ -2326,8 +2344,7 @@ ResultPage.buildReportHTML = function (formData) {
       <div>
         <span style="background:#1a5c3a;color:#fff;font-size:11px;font-weight:900;
                      padding:4px 8px;border-radius:4px;letter-spacing:0.1em;display:inline-block;">GTN</span>
-        <span style="font-size:12px;font-weight:700;color:#1f2937;margin-left:8px;">Global Talent Navi</span>
-        <div style="font-size:10px;color:#6b7280;margin-top:4px;">外国人材活用研究所</div>
+        <span style="font-size:12px;font-weight:700;color:#1f2937;margin-left:8px;">Global Talent Navi（GTN）</span>
       </div>
       <div style="text-align:right;font-size:11px;color:#6b7280;">
         <div>診断日：${dateStr}</div>
@@ -2340,7 +2357,7 @@ ResultPage.buildReportHTML = function (formData) {
                 background:linear-gradient(135deg,#0f3d26,#1a5c3a);border-radius:10px;color:#fff;">
       <div style="font-size:10px;opacity:0.7;letter-spacing:0.1em;margin-bottom:5px;">FULL REPORT</div>
       <div style="font-size:18px;font-weight:900;margin-bottom:4px;">外国人材活用戦略診断レポート</div>
-      <div style="font-size:11px;opacity:0.75;">Global Talent Navi 外国人材活用研究所｜企業別カスタム生成</div>
+      <div style="font-size:11px;opacity:0.75;">Global Talent Navi（GTN）｜企業別カスタム生成</div>
     </div>
 
     <!-- 会社情報 -->
@@ -2532,7 +2549,7 @@ ResultPage.buildReportHTML = function (formData) {
 
     <div style="padding-top:13px;border-top:1px solid #e5e7eb;
                 font-size:10px;color:#9ca3af;text-align:center;line-height:1.7;">
-      本レポートは Global Talent Navi 外国人材活用研究所 の分析モデルをもとに企業別に自動生成されたものです。<br>
+      本レポートは Global Talent Navi（GTN）の分析モデルをもとに企業別に自動生成されたものです。<br>
       株式会社フレアスタッフ / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
       プライバシーポリシー: https://globaltalent-navi.com/privacy
     </div>
