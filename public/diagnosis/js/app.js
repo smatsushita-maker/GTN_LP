@@ -2272,7 +2272,7 @@ ResultPage.buildReportHTML = function (formData) {
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
           <span style="font-size:15px;">${info.icon}</span>
           <span style="font-size:12px;font-weight:700;color:${info.color};">${info.label}</span>
-          ${isWeakest ? `<span style="font-size:10px;font-weight:700;background:${barColor};color:white;padding:2px 7px;border-radius:10px;margin-left:auto;line-height:1;display:inline-flex;align-items:center;">優先改善</span>` : ''}
+          ${isWeakest ? `<span style="font-size:10px;font-weight:700;background:${barColor};color:white;padding:0 9px;border-radius:11px;margin-left:auto;display:inline-block;height:20px;line-height:20px;">優先改善</span>` : ''}
         </div>
         <div style="font-size:10px;color:#6b7280;margin-bottom:7px;">${info.desc}</div>
         <div style="height:9px;background:#e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:4px;">
