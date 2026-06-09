@@ -52,6 +52,22 @@ var GTN_META_PROPERTY_MAP = {
   // timeline: 'gtn_diagnosis_timeline',   // ← 将来追加する場合の例
 };
 
+/** Google広告アトリビューション（トップレベル payload）→ HubSpot コンタクトプロパティ。
+ *  方針 2026-06: 初回接点（first-touch）を保持する。
+ *    → 既存値が空のときだけ書き込み、以後の再送信では上書きしない。
+ *    （role は「毎回最新で上書き」だが、アトリビューションは逆に初回を守る） */
+/** Google広告アトリビューション（トップレベル payload）→ HubSpot コンタクトプロパティ。
+ *  方針 2026-06: 初回接点（first-touch）を保持する。
+ *    → 既存値が空のときだけ書き込み、以後の再送信では上書きしない。
+ *    （role は「毎回最新で上書き」だが、アトリビューションは逆に初回を守る）
+ *  ※ 内部名は HubSpot 側の実プロパティ（gtn_*）に一致。連携検証済み 2026-06-09。 */
+var GTN_ATTR_PROPERTY_MAP = {
+  gclid:        'gtn_gclid',
+  utm_source:   'gtn_utm_source',
+  utm_medium:   'gtn_utm_medium',
+  utm_campaign: 'gtn_utm_campaign',
+};
+
 /**
  * 「既存値が空のときだけ書き込む（＝上書きしない）」プロパティの一覧。
  * ここに載せた内部名は既存値を保護する。載せなければ毎回・最新値で上書きする。
@@ -81,6 +97,12 @@ var GTN_PROPERTY_DEFS = [
       { label: 'その他',         value: 'other',        displayOrder: 3 },
     ],
   },
+  // Google広告アトリビューション（初回接点保持・set-if-empty）
+  // ※ 内部名は HubSpot 側の実プロパティ（gtn_*）に一致。setup再実行時は既存検知でスキップ。
+  { name: 'gtn_gclid',        label: 'Google Click ID (gclid)', description: '広告クリックID。初回接点を保持（CV→広告照合用）', groupName: 'contactinformation', type: 'string', fieldType: 'text' },
+  { name: 'gtn_utm_source',   label: 'utm_source',              description: '流入元（初回接点を保持）',           groupName: 'contactinformation', type: 'string', fieldType: 'text' },
+  { name: 'gtn_utm_medium',   label: 'utm_medium',              description: '流入メディア（初回接点を保持）',     groupName: 'contactinformation', type: 'string', fieldType: 'text' },
+  { name: 'gtn_utm_campaign', label: 'utm_campaign',            description: 'キャンペーン（初回接点を保持）',     groupName: 'contactinformation', type: 'string', fieldType: 'text' },
   // 将来例:
   // {
   //   name: 'gtn_diagnosis_timeline', label: '検討時期', groupName: 'contactinformation',
@@ -166,6 +188,17 @@ function upsertHubSpotContact_(data) {
       }
     });
 
+    // Google広告アトリビューション（トップレベル payload・空値は送らない）
+    // gclid / utm_* は first-touch を守るため、既存更新では「空のときだけ」書く（下記）。
+    var attrProps = {};
+    Object.keys(GTN_ATTR_PROPERTY_MAP).forEach(function (key) {
+      var hsName = GTN_ATTR_PROPERTY_MAP[key];
+      var v = data[key];
+      if (v !== undefined && v !== null && String(v).trim() !== '') {
+        attrProps[hsName] = String(v).trim();
+      }
+    });
+
     var existing = hsSearchContactByEmail_(email);
 
     // ── 新規作成 ──────────────────────────────
@@ -173,6 +206,7 @@ function upsertHubSpotContact_(data) {
       var createProps = { email: email };
       mergeInto_(createProps, baseProps);
       mergeInto_(createProps, metaProps);   // 新規は SET_IF_EMPTY 関係なく全て入れる
+      mergeInto_(createProps, attrProps);   // 新規＝初回接点。アトリビューションを記録
       var createRes = hsFetch_(
         'https://api.hubapi.com/crm/v3/objects/contacts', 'post',
         { properties: createProps }
@@ -201,6 +235,11 @@ function upsertHubSpotContact_(data) {
       }
     });
 
+    // 広告アトリビューション: 初回接点保持 → 既存が空のときだけ書き込む（既存値は上書きしない）
+    Object.keys(attrProps).forEach(function (hsName) {
+      if (!cur[hsName]) updateProps[hsName] = attrProps[hsName];
+    });
+
     if (Object.keys(updateProps).length === 0) {
       Logger.log('[HS] 更新項目なし（既存値を尊重）→ スキップ');
       return;
@@ -223,6 +262,9 @@ function hsSearchContactByEmail_(email) {
   var props = ['email', 'firstname', 'company'];
   Object.keys(GTN_META_PROPERTY_MAP).forEach(function (k) {
     props.push(GTN_META_PROPERTY_MAP[k]);
+  });
+  Object.keys(GTN_ATTR_PROPERTY_MAP).forEach(function (k) {
+    props.push(GTN_ATTR_PROPERTY_MAP[k]);  // 既存値の取得（set-if-empty 判定用）
   });
   var body = {
     filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: email }] }],
