@@ -1467,6 +1467,12 @@ const ResultPage = {
       risks:            this.risks.map(r => r.label),
       source:           loadSource(),
       ref:              loadRef(),
+      // Google広告アトリビューション（HubSpot連携用・初回接点保持はGAS側で担保）
+      // 空文字のときはGAS側で送信スキップ（既存値を汚さない）
+      gclid:            loadGclid()      || '',
+      utm_source:       loadUtmSource()  || '',
+      utm_medium:       loadUtmMedium()  || '',
+      utm_campaign:     loadUtmCampaign()|| '',
       sendReport:       true,
       // 4軸スコア（v4.0）
       strategyScore:    ax.strategyScore,
