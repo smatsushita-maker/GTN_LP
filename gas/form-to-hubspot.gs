@@ -25,7 +25,8 @@
  *      Apps Script エディタ → プロジェクトの設定（⚙）→ スクリプト プロパティ
  *      キー: HUBSPOT_TOKEN  値: （Private App のトークン）
  *   3) setupHubSpotProperties() を「一度だけ」手動実行
- *      → gtn_diagnosis_role（立場）プロパティを作成（既にあればスキップ）
+ *      → gtn_diagnosis_role（立場）/ gtn_employment_experience（雇用経験）等の
+ *        プロパティを作成（既にあればスキップ。定義追加時は再実行でOK）
  *      ※ HubSpot UI で手動作成済みなら本手順は不要（実行しても既存検知でスキップ）
  *   4) 既存 doPost の本文末尾に1行だけ追加（下の「組み込み例」参照）
  *        upsertHubSpotContact_(data);   // data は JSON.parse 済みの payload
@@ -49,6 +50,9 @@
  *    フロントの安定キー(role 等)は変えず、ここの対応付けだけで吸収する。 */
 var GTN_META_PROPERTY_MAP = {
   role: 'gtn_diagnosis_role',
+  // 雇用経験（2026-06 追加）: 診断冒頭Q1の回答（current / past / none_considering）
+  // role と同方針＝毎回・最新の診断値で上書き（GTN_SET_IF_EMPTY に含めない）
+  employment_experience: 'gtn_employment_experience',
   // timeline: 'gtn_diagnosis_timeline',   // ← 将来追加する場合の例
 };
 
@@ -95,6 +99,20 @@ var GTN_PROPERTY_DEFS = [
       { label: '人事・採用担当', value: 'hr',           displayOrder: 1 },
       { label: '現場責任者',     value: 'site_manager', displayOrder: 2 },
       { label: 'その他',         value: 'other',        displayOrder: 3 },
+    ],
+  },
+  // 雇用経験（2026-06 追加）: 診断冒頭Q1。経験者/未経験ルートのセグメント分岐用
+  {
+    name: 'gtn_employment_experience',
+    label: '外国人材の雇用経験',
+    description: '診断冒頭Q1で取得した雇用経験（経験者/未経験ルートのセグメント分岐用）',
+    groupName: 'contactinformation',
+    type: 'enumeration',
+    fieldType: 'select',
+    options: [
+      { label: '現在雇用している',                 value: 'current',          displayOrder: 0 },
+      { label: '過去に雇用したことがある',         value: 'past',             displayOrder: 1 },
+      { label: '雇用経験はないが、今後検討している', value: 'none_considering', displayOrder: 2 },
     ],
   },
   // Google広告アトリビューション（初回接点保持・set-if-empty）

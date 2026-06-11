@@ -1,5 +1,5 @@
 /**
- * GTN 外国人雇用リスク診断 — メインロジック
+ * GTN 外国人材活用診断 — メインロジック
  * -----------------------------------------------
  * GAS連携URLは下記 GAS_URL を差し替えてください
  * 相談ページURLは下記 CONSULT_URL を差し替えてください
@@ -299,10 +299,23 @@ const STORAGE_META_KEY = 'gtn_risk_meta';   // { role: 'executive', ... }
 
 /**
  * メタ設問定義（QUESTIONS とは別管理・スコア非影響）
- * key   : ペイロード/HubSpotマッピングで使う安定キー
- * value : HubSpotに渡す内部値（表示文言と分離）
+ * key      : ペイロード/HubSpotマッピングで使う安定キー
+ * value    : HubSpotに渡す内部値（表示文言と分離）
+ * position : 'pre'＝採点設問の前（診断冒頭）／省略時＝採点設問の後（結果直前）
  */
 const META_QUESTIONS = [
+  {
+    key: 'employment_experience',
+    required: true,
+    position: 'pre',
+    label: 'はじめに',
+    text: '外国人材の雇用経験はありますか？',
+    options: [
+      { value: 'current',          text: '現在雇用している' },
+      { value: 'past',             text: '過去に雇用したことがある' },
+      { value: 'none_considering', text: '雇用経験はないが、今後検討している' },
+    ],
+  },
   {
     key: 'role',
     required: true,
@@ -316,6 +329,68 @@ const META_QUESTIONS = [
     ],
   },
 ];
+
+/** 診断冒頭に出すメタ設問（position: 'pre'） */
+const PRE_META_QUESTIONS  = META_QUESTIONS.filter(m => m.position === 'pre');
+/** 採点設問の後に出すメタ設問（従来どおり結果直前） */
+const POST_META_QUESTIONS = META_QUESTIONS.filter(m => m.position !== 'pre');
+
+/** 雇用経験の内部値 → 表示文言（結果・PDF・レポート用） */
+const EXPERIENCE_LABELS = {
+  current:          '現在雇用している',
+  past:             '過去に雇用したことがある',
+  none_considering: '雇用経験はないが、今後検討している',
+};
+
+/**
+ * 雇用経験から診断ルートを判定する
+ * - experienced   : 現在雇用 or 過去に雇用（改善・再発防止の文脈）
+ * - inexperienced : 雇用経験なし・検討中（受入準備の文脈）
+ * - unknown       : 未回答・既存データ（既存表示のまま＝後方互換）
+ * @param {Object} meta loadMeta() の戻り値
+ * @returns {'experienced'|'inexperienced'|'unknown'}
+ */
+function getExperienceRoute(meta) {
+  const v = meta && meta.employment_experience;
+  if (v === 'current' || v === 'past') return 'experienced';
+  if (v === 'none_considering')        return 'inexperienced';
+  return 'unknown';
+}
+
+/** 診断ルートの内部値 → 通知用の表示文言（Slack/Notion/メール向け） */
+const EXPERIENCE_ROUTE_LABELS = {
+  experienced:   '経験者',
+  inexperienced: '未経験',
+};
+
+/**
+ * ルート別の結果コメント・CTA文言（出し分けの土台）
+ * ─────────────────────────────────────────────
+ * 方針（2026-06）: 診断名「外国人材活用診断」と成功確率の指標表記は全ルート共通。
+ * 出し分けるのは「結果コメント・PDF内コメント・CTA文言・通知用の補足」のみ。
+ * - unknown（既存データ・未回答）はキー自体を持たず、既存の汎用表示にフォールバックする
+ * - 将来ルート別に質問・スコアリングを分ける場合も、まずここに文言を追加していく
+ */
+const ROUTE_CONTENT = {
+  experienced: {
+    // 結果画面・PDFに表示するルート別コメント
+    resultComment: '御社はすでに外国人材の雇用経験があるため、採用そのものよりも、受入体制・現場コミュニケーション・定着支援の再設計が重要です。過去の課題や現在の違和感は、外国人材そのものの問題ではなく、受入設計や現場支援の不足から生じている可能性があります。',
+    // ロック予告バナーの補足文
+    teaserSupplement: 'この分析をもとに、定着リスクの解消と過去の課題の再発防止につながる具体策が分かります。',
+    // 相談CTA（結果画面・最終セクション）
+    ctaLabel: '外国人材活用の課題を相談する',
+    ctaNote:  '過去の失敗や現在の課題を整理し、定着・活躍につながる受入体制を一緒に再設計します。',
+    // 通知（Slack/Notion/メール）用の相談方針
+    consultFocus: '定着・現場課題・受入体制の再設計の相談',
+  },
+  inexperienced: {
+    resultComment: '御社はこれから外国人材の雇用を検討する段階です。採用前に、職務内容、在留資格、教育担当者、生活支援、入社後90日の定着設計を整えることで、採用後のミスマッチや早期離職を防ぎやすくなります。',
+    teaserSupplement: 'この分析をもとに、採用前に整えるべき受入体制と採用後90日の設計の方向性が分かります。',
+    ctaLabel: '外国人材の受入準備を相談する',
+    ctaNote:  '採用前に整えるべき体制や在留資格、入社後90日の定着設計について相談できます。',
+    consultFocus: '受入準備・在留資格・入社後90日の定着設計の相談',
+  },
+};
 
 /** メタ集合を保存（オブジェクト丸ごと） */
 function saveMeta(meta) {
@@ -621,9 +696,10 @@ const CheckPage = {
   currentIdx: 0,
   viewedQuestions: {},  // QA: question_viewed 重複発火防止用
   _autoAdvanceTimer: null,  // UX: 自動遷移タイマーID
-  phase: 'questions',   // 'questions' | 'meta'（立場などのメタ設問）
+  phase: 'questions',   // 'pre'（雇用経験などの冒頭メタ）| 'questions' | 'meta'（立場などのメタ設問）
   meta: {},             // 診断メタ集合（gtn_risk_meta と同期）
-  metaIdx: 0,           // META_QUESTIONS 内の現在位置
+  metaIdx: 0,           // POST_META_QUESTIONS 内の現在位置
+  preIdx: 0,            // PRE_META_QUESTIONS 内の現在位置
 
   init() {
     // トラッキングパラメータ（source / ref）を保存（v2.3）
@@ -640,14 +716,25 @@ const CheckPage = {
     this.answers    = loadAnswers();
     this.currentIdx = loadCurrentIndex();
     this.meta       = loadMeta();
-    this.phase      = 'questions';
     this.metaIdx    = 0;
+    this.preIdx     = 0;
+
+    // 冒頭メタ（雇用経験）が未回答なら 'pre' フェーズから開始。
+    // 回答済み（途中再開）なら従来どおり採点設問から（後方互換）。
+    const preUnanswered = PRE_META_QUESTIONS.some(
+      m => m.required && this.meta[m.key] === undefined
+    );
+    this.phase = (PRE_META_QUESTIONS.length > 0 && preUnanswered) ? 'pre' : 'questions';
 
     // インデックスが範囲外ならリセット
     if (this.currentIdx >= QUESTIONS.length) this.currentIdx = 0;
 
     this.bindEvents();
-    this.render();
+    if (this.phase === 'pre') {
+      this.renderPre();
+    } else {
+      this.render();
+    }
 
     // QA: 診断ページ到達イベント（page_view_lp と同形式）
     trackEvent('page_view_check', {
@@ -711,11 +798,12 @@ const CheckPage = {
     const prevBtn  = document.getElementById('btn-prev');
     const nextBtn  = document.getElementById('btn-next');
 
-    prevBtn.disabled = this.currentIdx === 0;
+    // 先頭の採点設問でも、冒頭メタ（雇用経験）があればそこへ戻れる
+    prevBtn.disabled = this.currentIdx === 0 && PRE_META_QUESTIONS.length === 0;
 
     if (isLast) {
       // 立場などのメタ設問が後続にある場合は、まだ結果に飛ばさず「次へ」
-      if (META_QUESTIONS.length > 0) {
+      if (POST_META_QUESTIONS.length > 0) {
         nextBtn.textContent = '次へ →';
         nextBtn.className   = 'btn-next-q';
       } else {
@@ -767,6 +855,14 @@ const CheckPage = {
   },
 
   prev() {
+    // 冒頭メタフェーズ：先頭なら戻る先なし
+    if (this.phase === 'pre') {
+      if (this.preIdx > 0) {
+        this.preIdx--;
+        this.renderPre();
+      }
+      return;
+    }
     // 立場フェーズ：先頭メタなら質問フェーズ（最終問）へ戻る
     if (this.phase === 'meta') {
       if (this.metaIdx > 0) {
@@ -783,10 +879,18 @@ const CheckPage = {
       this.currentIdx--;
       saveCurrentIndex(this.currentIdx);
       this.render();
+    } else if (PRE_META_QUESTIONS.length > 0) {
+      // 先頭の採点設問 → 冒頭メタ（雇用経験）へ戻る
+      clearTimeout(this._autoAdvanceTimer);
+      this.phase  = 'pre';
+      this.preIdx = PRE_META_QUESTIONS.length - 1;
+      this.renderPre();
     }
   },
 
   next() {
+    // 冒頭メタフェーズ中は専用ハンドラへ
+    if (this.phase === 'pre') return this.nextPre();
     // 立場フェーズ中は専用ハンドラへ
     if (this.phase === 'meta') return this.nextMeta();
 
@@ -799,11 +903,73 @@ const CheckPage = {
       this.render();
     } else {
       // 全問完了 → 立場などのメタ設問があれば先にメタフェーズへ（結果表示直前）
-      if (META_QUESTIONS.length > 0) {
+      if (POST_META_QUESTIONS.length > 0) {
         this.enterMetaPhase();
       } else {
         this.goToResult();
       }
+    }
+  },
+
+  /* ---- 冒頭メタ（雇用経験）フェーズ ---- */
+  renderPre() {
+    const m = PRE_META_QUESTIONS[this.preIdx];
+
+    // 採点設問の前なのでプログレスは0%スタート
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('progress-label').textContent = '最初の質問';
+    const pctEl = document.getElementById('progress-count');
+    if (pctEl) pctEl.textContent = '0% 完了';
+
+    document.getElementById('q-label').textContent = m.label || '';
+    document.getElementById('q-text').textContent  = m.text;
+
+    // 選択肢描画（値ベース・バッジなし — renderMeta と同形式）
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    m.options.forEach((opt) => {
+      const selected = this.meta[m.key] === opt.value;
+      const item = document.createElement('div');
+      item.className = 'option-item';
+      item.innerHTML = `
+        <input type="radio" name="meta_${m.key}" id="meta_${m.key}_${opt.value}"
+               value="${opt.value}" ${selected ? 'checked' : ''}>
+        <label class="option-label" for="meta_${m.key}_${opt.value}">
+          <span>${opt.text}</span>
+        </label>
+      `;
+      container.appendChild(item);
+    });
+    container.querySelectorAll('input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', () => this.onMetaSelect(m.key, radio.value));
+    });
+
+    // ボタン状態
+    const prevBtn = document.getElementById('btn-prev');
+    const nextBtn = document.getElementById('btn-next');
+    prevBtn.disabled = this.preIdx === 0;  // 最初の画面なので戻れない
+    nextBtn.textContent = '次の質問へ →';
+    nextBtn.className   = 'btn-next-q';
+    nextBtn.disabled = m.required ? (this.meta[m.key] === undefined) : false;
+
+    // フェードアニメーション
+    const card = document.getElementById('question-card');
+    card.classList.remove('fade-up');
+    void card.offsetWidth;
+    card.classList.add('fade-up');
+  },
+
+  nextPre() {
+    const m = PRE_META_QUESTIONS[this.preIdx];
+    // 必須ガード（未選択では進めない）
+    if (m.required && this.meta[m.key] === undefined) return;
+
+    if (this.preIdx < PRE_META_QUESTIONS.length - 1) {
+      this.preIdx++;
+      this.renderPre();
+    } else {
+      this.phase = 'questions';
+      this.render();
     }
   },
 
@@ -816,7 +982,7 @@ const CheckPage = {
   },
 
   renderMeta() {
-    const m = META_QUESTIONS[this.metaIdx];
+    const m = POST_META_QUESTIONS[this.metaIdx];
 
     // 全質問回答済みなのでプログレスは100%
     document.getElementById('progress-fill').style.width = '100%';
@@ -876,11 +1042,11 @@ const CheckPage = {
   },
 
   nextMeta() {
-    const m = META_QUESTIONS[this.metaIdx];
+    const m = POST_META_QUESTIONS[this.metaIdx];
     // 必須ガード（未選択では進めない）
     if (m.required && this.meta[m.key] === undefined) return;
 
-    if (this.metaIdx < META_QUESTIONS.length - 1) {
+    if (this.metaIdx < POST_META_QUESTIONS.length - 1) {
       this.metaIdx++;
       this.renderMeta();
     } else {
@@ -930,6 +1096,8 @@ const ResultPage = {
   answers:        {},
   companyTypeKey: 'growth_driving',
   axisScores:     null,  // v4.0: 4軸スコア情報
+  experience:     '',        // 雇用経験（current / past / none_considering / ''）
+  route:          'unknown', // 診断ルート（experienced / inexperienced / unknown）
 
   init() {
     this.answers = loadAnswers();
@@ -946,6 +1114,12 @@ const ResultPage = {
     this.risks          = this.extractRisks();
     this.axisScores     = this.calcAxisScores();                    // v4.0
     this.companyTypeKey = getCompanyType(this.rate, this.axisScores); // v4.0
+
+    // 雇用経験ルート（送信後の clearMeta() に備え、init 時点で確定保持する）
+    // 既存データ（メタ未保存）の場合は 'unknown' となり、表示は従来のまま
+    const meta      = (typeof loadMeta === 'function') ? loadMeta() : {};
+    this.experience = (meta && meta.employment_experience) || '';
+    this.route      = getExperienceRoute(meta);
 
     // Phase3.2: utm_* / gclid を取り込み・保存（直接URLアクセス対応）
     if (typeof saveAdsParams === 'function')   saveAdsParams();
@@ -1459,7 +1633,15 @@ const ResultPage = {
     return {
       timestamp:        new Date().toISOString(),
       variant:          'new',  // v6.0: A/Bテスト用識別子
-      meta:             meta,   // { role: 'executive', ... } — GAS側でHubSpotプロパティへマッピング
+      meta:             meta,   // { role: 'executive', employment_experience: 'current', ... } — GAS側でHubSpotプロパティへマッピング
+      // 雇用経験（Q1）— Slack通知・Notion・メール等でmetaを掘らずに使えるようトップレベルにも展開
+      // 未回答・既存データでは空文字 / 'unknown'（GAS側でのnull安全を担保）
+      employmentExperience:      (meta && meta.employment_experience) || '',
+      employmentExperienceLabel: EXPERIENCE_LABELS[(meta && meta.employment_experience)] || '',
+      experienceRoute:           getExperienceRoute(meta),
+      // 通知用: ルート表示名（経験者/未経験。unknownは空文字）と相談方針
+      experienceRouteLabel:      EXPERIENCE_ROUTE_LABELS[getExperienceRoute(meta)] || '',
+      consultFocus:              (ROUTE_CONTENT[getExperienceRoute(meta)] || {}).consultFocus || '',
       score:            this.score,
       rate:             this.rate,
       rating:           this.rating,
@@ -1633,7 +1815,7 @@ function getSourceMessage(source) {
  * この文面をそのまま転送・コピペできるように設計
  */
 const REFERRAL_COPY_TEXT =
-  '外国人採用を検討している企業様向けの簡易診断です。\n' +
+  '外国人材活用診断 — 外国人材の採用を検討中の企業様にも、すでに雇用中・過去に雇用した企業様にも使える簡易診断です。\n' +
   '採用の進め方、受入体制、定着リスクを整理できます。\n' +
   '▶ https://www.globaltalent-navi.com/diagnosis/';
 
@@ -1956,6 +2138,34 @@ ResultPage.renderLockedBlurCards = function () {
 };
 
 /**
+ * 雇用経験ルート別の文言を結果画面へ反映（出し分けの土台）
+ * 診断名・成功確率キャプションは全ルート共通（出し分けない）。
+ * route が unknown（既存データ・未回答）の場合は何もしない＝既存の汎用表示のまま
+ */
+ResultPage.applyRouteContent = function () {
+  const c = ROUTE_CONTENT[this.route];
+  if (!c) return;
+
+  // ルート別の結果コメント（unknown時は非表示のまま）
+  const rcEl = document.getElementById('route-comment');
+  if (rcEl && c.resultComment) {
+    rcEl.textContent = c.resultComment;
+    rcEl.classList.remove('hidden');
+  }
+
+  // ロック予告バナーの補足文
+  const supEl = document.getElementById('lock-teaser-supplement');
+  if (supEl && c.teaserSupplement) supEl.textContent = c.teaserSupplement;
+
+  // 相談CTA（最終セクション）の文言・補足文
+  // ※ id / class / data-consult-location は変更しない（GA4計測・リンク設定を維持）
+  const ctaEl = document.getElementById('cta-consult-final');
+  if (ctaEl && c.ctaLabel) ctaEl.textContent = c.ctaLabel;
+  const ctaNoteEl = document.getElementById('consult-cta-note');
+  if (ctaNoteEl && c.ctaNote) ctaNoteEl.textContent = c.ctaNote;
+};
+
+/**
  * v6.0: リスク示唆テキストを更新
  */
 ResultPage.renderRiskHint = function () {
@@ -2188,6 +2398,11 @@ ResultPage.buildReportHTML = function (formData) {
     ? `雇用中（${formData.foreignCount ? formData.foreignCount + '名' : '人数未入力'}）`
     : '現在雇用なし';
 
+  // 雇用経験（Q1）— 未回答・既存データでは空文字となり、行ごと非表示にする
+  const experienceText = EXPERIENCE_LABELS[this.experience] || '';
+  // ルート別コメント（結果画面と同文言。unknown はノートなし＝既存レイアウトのまま）
+  const routeFocusNote = (ROUTE_CONTENT[this.route] || {}).resultComment || '';
+
   // 企業タイプ
   const companyType = COMPANY_TYPES[this.companyTypeKey] || COMPANY_TYPES['growth_driving'];
   const typeColorMap = {
@@ -2305,7 +2520,7 @@ ResultPage.buildReportHTML = function (formData) {
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>外国人材活用戦略診断レポート | GTN</title>
+  <title>外国人材活用診断レポート | GTN</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -2362,7 +2577,7 @@ ResultPage.buildReportHTML = function (formData) {
     <div style="text-align:center;margin-bottom:18px;padding:16px 20px;
                 background:linear-gradient(135deg,#0f3d26,#1a5c3a);border-radius:10px;color:#fff;">
       <div style="font-size:10px;opacity:0.7;letter-spacing:0.1em;margin-bottom:5px;">FULL REPORT</div>
-      <div style="font-size:18px;font-weight:900;margin-bottom:4px;">外国人材活用戦略診断レポート</div>
+      <div style="font-size:18px;font-weight:900;margin-bottom:4px;">外国人材活用診断レポート</div>
       <div style="font-size:11px;opacity:0.75;">Global Talent Navi（GTN）｜企業別カスタム生成</div>
     </div>
 
@@ -2378,12 +2593,20 @@ ResultPage.buildReportHTML = function (formData) {
            <div style="font-weight:600;color:#1f2937;font-size:13px;">${formData.industry || '—'}</div></div>
       <div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">従業員数</div>
            <div style="font-weight:600;color:#1f2937;font-size:13px;">${formData.employees || '—'}</div></div>
-      <div${formData.challenges ? '' : ' style="grid-column:1/-1"'}>
+      ${experienceText ? `<div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">雇用経験</div>
+           <div style="font-weight:600;color:#1f2937;font-size:13px;">${experienceText}</div></div>` : ''}
+      <div${(formData.challenges || experienceText) ? '' : ' style="grid-column:1/-1"'}>
            <div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">外国人雇用</div>
            <div style="font-weight:600;color:#1f2937;font-size:13px;">${foreignInfo}</div></div>
       ${formData.challenges ? `<div style="grid-column:1/-1"><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">現在の課題</div>
            <div style="font-size:12px;color:#374151;">${formData.challenges}</div></div>` : ''}
     </div>
+
+    ${routeFocusNote ? `<!-- 診断の観点（雇用経験ルート別） -->
+    <div style="background:#f9fafb;border-left:3px solid #1a5c3a;padding:10px 14px;border-radius:6px;
+                font-size:11px;color:#374151;line-height:1.7;margin-bottom:18px;">
+      ${routeFocusNote}
+    </div>` : ''}
 
     <!-- ① 診断結果サマリー -->
     <div class="section-title">① 診断結果サマリー</div>
@@ -2687,7 +2910,7 @@ ResultPage.generatePDF = async function (formData) {
       pdf.text(`${p} / ${totalPages}`, pageW - 18, pageH - 5);
     }
 
-    pdf.save('GTN_外国人材活用戦略診断レポート.pdf');
+    pdf.save('GTN_外国人材活用診断レポート.pdf');
     console.log('[GTN] PDF生成完了（セクション別描画）');
 
   } finally {
@@ -2872,6 +3095,7 @@ ResultPage.renderCtaMessages = function () {
 const _origRender = ResultPage.render.bind(ResultPage);
 ResultPage.render = function () {
   _origRender();
+  this.applyRouteContent();         // 雇用経験ルート別の文言反映（unknown は既存表示）
   // v6.0: 無料エリアではロックUIのみ描画。詳細分析はフォーム送信後に描画する
   this.renderLockedPreview();       // リスク件数をロックUIに反映
   this.renderLockedBlurCards();     // v6.0: 4軸ぼかしカードに実スコアをセット

@@ -13,7 +13,7 @@
     gtag('config', 'G-HK43N5MW3L');
   </script>
   <!-- End Google Analytics -->
-  <title>診断結果 | 外国人材活用戦略診断 | GTN</title>
+  <title>診断結果 | 外国人材活用診断 | GTN</title>
   <meta name="robots" content="noindex">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -487,6 +487,9 @@
           診断結果を読み込んでいます...
         </div>
 
+        <!-- 雇用経験ルート別コメント（JSで出し分け。unknown＝既存データ時は非表示のまま） -->
+        <div class="improvement-note hidden" id="route-comment" role="note"></div>
+
         <!-- AIコメント プレースホルダー（即時表示、AI応答後にテキスト差し替え） -->
         <div id="ai-extra-block" class="ai-extra-block" role="note" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
           <div id="ai-core-issue" class="ai-core-issue ai-card-placeholder">
@@ -505,7 +508,7 @@
             <div class="lock-teaser-body">
               <p class="lock-teaser-heading">ここから先は、貴社専用の詳細分析です</p>
               <p class="lock-teaser-items">4軸スコア分析 ／ リスク詳細と対策 ／ 改善優先順位 ／ 専門家コメント ／ PDF完全版レポート</p>
-              <p class="lock-teaser-supplement">この分析をもとに、採用前に整えるべき設計と定着率改善の具体策が分かります。</p>
+              <p class="lock-teaser-supplement" id="lock-teaser-supplement">この分析をもとに、採用前に整えるべき設計と定着率改善の具体策が分かります。</p>
               <span class="lock-teaser-cta-btn js-scroll-to-gate" role="button" tabindex="0">&#x1F512; 貴社専用の分析結果をすべて確認する</span>
               <p class="lock-teaser-sub-note">入力は30秒・営業連絡は一切ありません</p>
             </div>
@@ -840,7 +843,8 @@
           無料で専門家に相談する（60分）
         </a>
         <p class="final-consult-note">無料 ／ 60分 ／ オンライン対応 ／ 秘密厳守 ／ 無理な営業なし</p>
-        <p style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:10px;line-height:1.6;">
+        <!-- 雇用経験ルート別の相談補足文（JSで出し分け。unknown時はこの汎用文のまま） -->
+        <p id="consult-cta-note" style="font-size:0.82rem;color:rgba(255,255,255,0.7);margin-top:10px;line-height:1.6;">
           何から着手すべきかを60分で整理します。<br>
           採用前でも採用後でも相談できます。
         </p>
