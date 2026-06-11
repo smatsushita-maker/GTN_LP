@@ -25,7 +25,7 @@
  *      Apps Script エディタ → プロジェクトの設定（⚙）→ スクリプト プロパティ
  *      キー: HUBSPOT_TOKEN  値: （Private App のトークン）
  *   3) setupHubSpotProperties() を「一度だけ」手動実行
- *      → gtn_diagnosis_role（立場）/ gtn_koyoukeiken（雇用経験）等の
+ *      → gtn_diagnosis_role（立場）/ gtn_employment_experience（雇用経験）等の
  *        プロパティを作成（既にあればスキップ。定義追加時は再実行でOK）
  *      ※ HubSpot UI で手動作成済みなら本手順は不要（実行しても既存検知でスキップ）
  *   4) 既存 doPost の本文末尾に1行だけ追加（下の「組み込み例」参照）
@@ -52,9 +52,8 @@ var GTN_META_PROPERTY_MAP = {
   role: 'gtn_diagnosis_role',
   // 雇用経験（2026-06 追加）: 診断冒頭Q1の回答（current / past / none_considering）
   // role と同方針＝毎回・最新の診断値で上書き（GTN_SET_IF_EMPTY に含めない）
-  // ※ HubSpot側の実プロパティ名は gtn_koyoukeiken（2026-06-11 手動作成・選択肢値は一致確認済み）
-  //   内部名は作成後変更不可のため、コード側を実プロパティに合わせている
-  employment_experience: 'gtn_koyoukeiken',
+  // ※ HubSpot側の実プロパティ（2026-06-11 手動作成）と一致確認済み
+  employment_experience: 'gtn_employment_experience',
   // timeline: 'gtn_diagnosis_timeline',   // ← 将来追加する場合の例
 };
 
@@ -104,10 +103,10 @@ var GTN_PROPERTY_DEFS = [
     ],
   },
   // 雇用経験（2026-06 追加）: 診断冒頭Q1。経験者/未経験ルートのセグメント分岐用
-  // ※ 2026-06-11 に HubSpot UI で手動作成済み（内部名 gtn_koyoukeiken）。
-  //   setupHubSpotProperties() 実行時は既存検知でスキップされる（定義は自己修復用に保持）
+  // ※ 2026-06-11 に HubSpot UI で手動作成済み。setupHubSpotProperties() 実行時は
+  //   既存検知でスキップされる（定義は自己修復用に保持）
   {
-    name: 'gtn_koyoukeiken',
+    name: 'gtn_employment_experience',
     label: 'GTN 雇用経験',
     description: '診断冒頭Q1で取得した雇用経験（経験者/未経験ルートのセグメント分岐用）',
     groupName: 'contactinformation',
