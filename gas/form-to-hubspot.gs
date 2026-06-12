@@ -54,6 +54,11 @@ var GTN_META_PROPERTY_MAP = {
   // role と同方針＝毎回・最新の診断値で上書き（GTN_SET_IF_EMPTY に含めない）
   // ※ HubSpot側の実プロパティ（2026-06-11 手動作成）と一致確認済み
   employment_experience: 'gtn_employment_experience',
+  // 活用状況（2026-06 追加）: 診断冒頭Q2（Q1=current のみ取得）
+  foreign_talent_status: 'gtn_foreign_talent_status',
+  // 顧客分類（2026-06 追加）: フロントで Q1×Q2 から導出した商談前分類
+  // unknown はフロント側で送信しない（既存コンタクトの分類を上書きしない）
+  customer_segment: 'gtn_customer_segment',
   // timeline: 'gtn_diagnosis_timeline',   // ← 将来追加する場合の例
 };
 
@@ -105,6 +110,8 @@ var GTN_PROPERTY_DEFS = [
   // 雇用経験（2026-06 追加）: 診断冒頭Q1。経験者/未経験ルートのセグメント分岐用
   // ※ 2026-06-11 に HubSpot UI で手動作成済み。setupHubSpotProperties() 実行時は
   //   既存検知でスキップされる（定義は自己修復用に保持）
+  // ※ 2026-06 改修でQ1の選択肢文言を変更。内部値は不変のため既存データに影響なし。
+  //   HubSpot側の選択肢「ラベル」は手動更新が必要（past / none_considering の表示名）
   {
     name: 'gtn_employment_experience',
     label: 'GTN 雇用経験',
@@ -113,9 +120,40 @@ var GTN_PROPERTY_DEFS = [
     type: 'enumeration',
     fieldType: 'select',
     options: [
-      { label: '現在雇用している',                 value: 'current',          displayOrder: 0 },
-      { label: '過去に雇用したことがある',         value: 'past',             displayOrder: 1 },
-      { label: '雇用経験はないが、今後検討している', value: 'none_considering', displayOrder: 2 },
+      { label: '現在雇用している',                   value: 'current',          displayOrder: 0 },
+      { label: '過去に雇用していたが、現在はいない', value: 'past',             displayOrder: 1 },
+      { label: '雇用経験はない',                     value: 'none_considering', displayOrder: 2 },
+    ],
+  },
+  // 活用状況（2026-06 追加）: 診断冒頭Q2。現在雇用中企業のみ取得
+  {
+    name: 'gtn_foreign_talent_status',
+    label: 'GTN 活用状況',
+    description: '診断冒頭Q2で取得した現在の外国人材活用状況（Q1=現在雇用している企業のみ）',
+    groupName: 'contactinformation',
+    type: 'enumeration',
+    fieldType: 'select',
+    options: [
+      { label: 'うまくいっている', value: 'working_well', displayOrder: 0 },
+      { label: '一部課題がある',   value: 'some_issues',  displayOrder: 1 },
+      { label: '大きな課題がある', value: 'major_issues', displayOrder: 2 },
+    ],
+  },
+  // 顧客分類（2026-06 追加）: Q1×Q2から導出した商談前分類（ルート別の相談率・商談率分析用）
+  {
+    name: 'gtn_customer_segment',
+    label: 'GTN 顧客分類',
+    description: '診断冒頭Q1×Q2から導出した商談前の顧客分類（フロント側で算出・unknownは送信されない）',
+    groupName: 'contactinformation',
+    type: 'enumeration',
+    fieldType: 'select',
+    options: [
+      { label: '活用中・良好',           value: 'current_well',         displayOrder: 0 },
+      { label: '活用中・一部課題あり',   value: 'current_some_issues',  displayOrder: 1 },
+      { label: '活用中・大きな課題あり', value: 'current_major_issues', displayOrder: 2 },
+      { label: '過去雇用・現在はいない', value: 'past_not_current',     displayOrder: 3 },
+      { label: '未経験',                 value: 'inexperienced',        displayOrder: 4 },
+      { label: '不明',                   value: 'unknown',              displayOrder: 5 },
     ],
   },
   // Google広告アトリビューション（初回接点保持・set-if-empty）

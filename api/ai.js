@@ -87,6 +87,10 @@ function validatePayload(body) {
       rating:          sanitizeStr(d.rating, 4),
       companyType:     sanitizeStr(d.companyType, 40),
       weakestAxis:     sanitizeStr(d.weakestAxis, 40),
+      // 商談前の顧客分類（2026-06）: AIコメントの文脈出し分けに使用
+      employmentExperience: sanitizeStr(d.employmentExperience, 24),
+      foreignTalentStatus:  sanitizeStr(d.foreignTalentStatus, 24),
+      customerSegment:      sanitizeStr(d.customerSegment, 32),
       axisRates: {
         strategy:  sanitizeNum(ax.strategy),
         structure: sanitizeNum(ax.structure),

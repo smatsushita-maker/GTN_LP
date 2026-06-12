@@ -27,6 +27,15 @@ function determineTargetState(data) {
   const fe   = (data.foreignEmployed || '').toUpperCase();
   const rate = Number(data.rate);
 
+  // 顧客分類（診断冒頭Q1/Q2由来・2026-06）があれば最優先で使う。
+  // foreignEmployed（旧フォーム項目）より信頼できる一次情報のため。
+  const seg = data.customerSegment || '';
+  if (seg === 'current_major_issues') return 'manifest';
+  if (seg === 'current_some_issues')  return 'manifest';
+  if (seg === 'current_well')         return 'latent';
+  if (seg === 'past_not_current')     return 'manifest';   // 失敗が顕在化した経験あり
+  if (seg === 'inexperienced')        return 'prevention';
+
   // 外国人雇用していない → 予防ターゲット
   if (fe === 'NO') return 'prevention';
 

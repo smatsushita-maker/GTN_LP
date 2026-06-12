@@ -72,6 +72,74 @@ function getTargetVoiceBlock(target) {
 }
 
 /* -----------------------------------------------------------------------
+   顧客分類（customerSegment）ごとの「語り口ブロック」（2026-06）
+   ---------------------------------------------------------------------
+   診断冒頭Q1（雇用経験）/ Q2（活用状況）から確定した一次情報のため、
+   分類が判明している場合はターゲット状態の語り口より優先して使う。
+   分類が unknown / 未指定の場合は null を返し、従来の
+   getTargetVoiceBlock(target) にフォールバックする。
+----------------------------------------------------------------------- */
+
+const SEGMENT_LABEL_JA = {
+  current_well:         '活用中・良好',
+  current_some_issues:  '活用中・一部課題あり',
+  current_major_issues: '活用中・大きな課題あり',
+  past_not_current:     '過去雇用・現在はいない',
+  inexperienced:        '未経験',
+};
+
+function getSegmentVoiceBlock(segment) {
+  if (segment === 'current_well') {
+    return [
+      '## 語り口（活用中・良好：すでに成果が出ている前提）',
+      '- 「すでにうまくいっている」ことを一度肯定的に受け止める',
+      '- その上で、属人的な運用のまま増員・横展開した時に崩れる構造的な危うさを指摘する',
+      '- テーマは「仕組み化」「制度整備」「再現性」。良い状態を制度に変える視点を示す',
+      '- 禁止：「課題が深刻」「失敗している」など現状否定の表現',
+      '- 禁止：「これから採用する」など未経験向けの言い回し',
+    ].join('\n');
+  }
+  if (segment === 'current_some_issues') {
+    return [
+      '## 語り口（活用中・一部課題あり：違和感が出始めている前提）',
+      '- 現場コミュニケーションや定着面の「小さな違和感」に共感する',
+      '- 小さな違和感を放置すると離職・現場疲弊につながる流れを言語化する',
+      '- 「外国人材が悪い」のではなく、受入設計・現場支援の不足に原因がある可能性を示す',
+      '- 禁止：「全面的な再設計が必要」など過度に深刻化させる表現',
+      '- 禁止：「これから採用する」など未経験向けの言い回し',
+    ].join('\n');
+  }
+  if (segment === 'current_major_issues') {
+    return [
+      '## 語り口（活用中・大きな課題あり：課題が顕在化している前提）',
+      '- 現場で起きている痛み（離職・疲弊・コミュニケーション断絶など）にまず共感する',
+      '- 原因は外国人材そのものではなく、受入設計・教育・現場支援の不足にある可能性を明確に示す',
+      '- 「まず課題を整理し、受入体制を再設計する」必要性の輪郭を鮮明にする',
+      '- 禁止：「うまくいっている」前提の表現、予防文脈の言い回し',
+    ].join('\n');
+  }
+  if (segment === 'past_not_current') {
+    return [
+      '## 語り口（過去雇用・現在はいない：失敗経験を整理したい前提）',
+      '- 過去にうまくいかなかった経験があることを前提に、責めずに受け止める',
+      '- 「外国人材が合わなかった」のではなく、職務設計・支援体制・現場理解に改善余地があった可能性を示す',
+      '- 失敗原因を整理すれば、再チャレンジすべきかどうかを冷静に判断できるという視点を残す',
+      '- 禁止：「現在雇用中」前提の表現、「初めての採用」前提の表現',
+    ].join('\n');
+  }
+  if (segment === 'inexperienced') {
+    return [
+      '## 語り口（未経験：これから検討する前提）',
+      '- 「採用できるか」ではなく「受け入れられる体制があるか」が論点だと示す',
+      '- 在留資格・職務設計・教育担当者・生活支援・入社後90日の定着設計など、採用前に確認すべき観点に触れる',
+      '- 多くの企業が準備不足のまま採用して短期離職を招く失敗パターンを1つ示す',
+      '- 禁止：「すでに起きている」「離職が多い」など顕在課題の断定表現',
+    ].join('\n');
+  }
+  return null; // unknown / 未指定 → 従来のターゲット語り口へフォールバック
+}
+
+/* -----------------------------------------------------------------------
    risk_message の強化ルール（共通）
    ---------------------------------------------------------------------
    抽象的な「離職リスクが高まります」を禁止し、
@@ -131,14 +199,17 @@ function buildResultPrompt(d, level, target) {
   const weakest     = AXIS_LABEL_JA[d.weakestAxis] || '—';
   const guide       = getLevelGuide(level);
   const targetGuide = getTargetGuide(target);
-  const voiceBlock  = getTargetVoiceBlock(target);
+  // 顧客分類が判明していれば分類別の語り口を優先（unknownは従来のターゲット語り口）
+  const segBlock    = getSegmentVoiceBlock(d.customerSegment);
+  const voiceBlock  = segBlock || getTargetVoiceBlock(target);
+  const segLabel    = SEGMENT_LABEL_JA[d.customerSegment] || '';
   const riskRules   = getRiskMessageRules();
   const fullBonus   = getFullLevelBonus(level);
   const indHint     = getIndustryHint(d.industry);
 
   return [
     'あなたは外国人材活用に精通した日本のBtoBコンサルタントです。',
-    '以下の企業の「外国人材 戦力化・定着」簡易診断結果をもとに、',
+    '以下の企業の「外国人材活用診断」の結果をもとに、',
     'その会社に向けた診断コメントを日本語で作成してください。',
     '',
     '# 入力情報',
@@ -146,6 +217,7 @@ function buildResultPrompt(d, level, target) {
     '- 従業員数：' + employees,
     '- 外国人比率：' + foreignRatio,
     '- 外国人雇用の有無：' + foreignEmp,
+    segLabel ? '- 顧客分類：' + segLabel : '',
     '- 総合スコア：' + (d.score != null ? d.score + ' / 20' : '—'),
     '- 成功確率：' + rate,
     '- 評価ランク：' + rating,
@@ -193,7 +265,10 @@ function buildResultPrompt(d, level, target) {
 function buildEmailPrompt(d, level, target) {
   const weakest     = AXIS_LABEL_JA[d.weakestAxis] || '—';
   const targetGuide = getTargetGuide(target);
-  const voiceBlock  = getTargetVoiceBlock(target);
+  // 顧客分類が判明していれば分類別の語り口を優先（result と同方針）
+  const segBlock    = getSegmentVoiceBlock(d.customerSegment);
+  const voiceBlock  = segBlock || getTargetVoiceBlock(target);
+  const segLabel    = SEGMENT_LABEL_JA[d.customerSegment] || '';
   const indHint     = getIndustryHint(d.industry);
 
   return [
@@ -204,6 +279,7 @@ function buildEmailPrompt(d, level, target) {
     '- 会社名：' + (d.companyName || '—'),
     '- 業種：' + (d.industry || '—'),
     '- 外国人雇用の有無：' + (d.foreignEmployed || '—'),
+    segLabel ? '- 顧客分類：' + segLabel : '',
     '- 評価ランク：' + (d.rating || '—'),
     '- 最も弱い軸：' + weakest,
     indHint ? '- 業種補足ヒント：' + indHint : '',

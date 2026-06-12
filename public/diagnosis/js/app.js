@@ -302,6 +302,7 @@ const STORAGE_META_KEY = 'gtn_risk_meta';   // { role: 'executive', ... }
  * key      : ペイロード/HubSpotマッピングで使う安定キー
  * value    : HubSpotに渡す内部値（表示文言と分離）
  * position : 'pre'＝採点設問の前（診断冒頭）／省略時＝採点設問の後（結果直前）
+ * showIf   : (meta) => boolean。条件付き表示（省略時は常に表示）
  */
 const META_QUESTIONS = [
   {
@@ -312,8 +313,22 @@ const META_QUESTIONS = [
     text: '外国人材の雇用経験はありますか？',
     options: [
       { value: 'current',          text: '現在雇用している' },
-      { value: 'past',             text: '過去に雇用したことがある' },
-      { value: 'none_considering', text: '雇用経験はないが、今後検討している' },
+      { value: 'past',             text: '過去に雇用していたが、現在はいない' },
+      { value: 'none_considering', text: '雇用経験はない' },
+    ],
+  },
+  {
+    // Q2: 現在雇用中の企業のみに表示（商談前の顧客分類用・スコア非影響）
+    key: 'foreign_talent_status',
+    required: true,
+    position: 'pre',
+    label: 'はじめに',
+    text: '現在の外国人材活用状況に最も近いものを選んでください',
+    showIf: function (meta) { return !!meta && meta.employment_experience === 'current'; },
+    options: [
+      { value: 'working_well', text: 'うまくいっている' },
+      { value: 'some_issues',  text: '一部課題がある' },
+      { value: 'major_issues', text: '大きな課題がある' },
     ],
   },
   {
@@ -338,8 +353,15 @@ const POST_META_QUESTIONS = META_QUESTIONS.filter(m => m.position !== 'pre');
 /** 雇用経験の内部値 → 表示文言（結果・PDF・レポート用） */
 const EXPERIENCE_LABELS = {
   current:          '現在雇用している',
-  past:             '過去に雇用したことがある',
-  none_considering: '雇用経験はないが、今後検討している',
+  past:             '過去に雇用していたが、現在はいない',
+  none_considering: '雇用経験はない',
+};
+
+/** 活用状況（Q2）の内部値 → 表示文言 */
+const STATUS_LABELS = {
+  working_well: 'うまくいっている',
+  some_issues:  '一部課題がある',
+  major_issues: '大きな課題がある',
 };
 
 /**
@@ -364,31 +386,87 @@ const EXPERIENCE_ROUTE_LABELS = {
 };
 
 /**
- * ルート別の結果コメント・CTA文言（出し分けの土台）
- * ─────────────────────────────────────────────
- * 方針（2026-06）: 診断名「外国人材活用診断」と成功確率の指標表記は全ルート共通。
- * 出し分けるのは「結果コメント・PDF内コメント・CTA文言・通知用の補足」のみ。
- * - unknown（既存データ・未回答）はキー自体を持たず、既存の汎用表示にフォールバックする
- * - 将来ルート別に質問・スコアリングを分ける場合も、まずここに文言を追加していく
+ * 商談前の顧客分類（customer segment）を判定する
+ * - current_well         : 現在雇用 × うまくいっている
+ * - current_some_issues  : 現在雇用 × 一部課題がある
+ * - current_major_issues : 現在雇用 × 大きな課題がある
+ * - past_not_current     : 過去に雇用していたが、現在はいない
+ * - inexperienced        : 雇用経験はない
+ * - unknown              : 既存データ・未回答（current だが活用状況欠損の旧データ含む）
+ * @param {Object} meta loadMeta() の戻り値
+ * @returns {string}
  */
-const ROUTE_CONTENT = {
-  experienced: {
-    // 結果画面・PDFに表示するルート別コメント
-    resultComment: '御社はすでに外国人材の雇用経験があるため、採用そのものよりも、受入体制・現場コミュニケーション・定着支援の再設計が重要です。過去の課題や現在の違和感は、外国人材そのものの問題ではなく、受入設計や現場支援の不足から生じている可能性があります。',
+function getCustomerSegment(meta) {
+  const exp    = meta && meta.employment_experience;
+  const status = meta && meta.foreign_talent_status;
+  if (exp === 'current') {
+    if (status === 'working_well') return 'current_well';
+    if (status === 'some_issues')  return 'current_some_issues';
+    if (status === 'major_issues') return 'current_major_issues';
+    return 'unknown'; // Q2導入前の旧データ等。推測で分類しない
+  }
+  if (exp === 'past')             return 'past_not_current';
+  if (exp === 'none_considering') return 'inexperienced';
+  return 'unknown';
+}
+
+/** 顧客分類の内部値 → 表示文言（Slack/Notion/メール・PDF向け） */
+const SEGMENT_LABELS = {
+  current_well:         '活用中・良好',
+  current_some_issues:  '活用中・一部課題あり',
+  current_major_issues: '活用中・大きな課題あり',
+  past_not_current:     '過去雇用・現在はいない',
+  inexperienced:        '未経験',
+  unknown:              '不明',
+};
+
+/**
+ * 顧客分類別の結果コメント・CTA文言（商談前分類の出し分け）
+ * ─────────────────────────────────────────────
+ * 方針（2026-06）: 診断名「外国人材活用診断」と成功確率の指標表記は全分類共通。
+ * 出し分けるのは「結果コメント・PDF内コメント・CTA文言・AIコメント文脈・通知用の相談方針」のみ。
+ * - unknown（既存データ・未回答）はキー自体を持たず、既存の汎用表示にフォールバックする
+ * - 将来分類別に質問・スコアリングを分ける場合も、まずここに文言を追加していく
+ */
+const SEGMENT_CONTENT = {
+  current_well: {
+    // 結果画面・PDFに表示する分類別コメント
+    resultComment: '御社はすでに外国人材の活用が一定の成果につながっている状態です。次のテーマは、増員・横展開と、属人的な運用を仕組みに変えて再現性を持たせることです。今の良い状態のうちに教育・評価・受入の制度を整備することで、人数が増えても安定した定着と戦力化が可能になります。',
     // ロック予告バナーの補足文
-    teaserSupplement: 'この分析をもとに、定着リスクの解消と過去の課題の再発防止につながる具体策が分かります。',
+    teaserSupplement: 'この分析をもとに、増員・横展開と運用の仕組み化に向けた具体策が分かります。',
     // 相談CTA（結果画面・最終セクション）
-    ctaLabel: '外国人材活用の課題を相談する',
-    ctaNote:  '過去の失敗や現在の課題を整理し、定着・活躍につながる受入体制を一緒に再設計します。',
+    ctaLabel: '外国人材活用の拡大について相談する',
+    ctaNote:  '増員・横展開・制度整備など、今の良い状態を仕組みとして定着させる進め方を一緒に整理します。',
     // 通知（Slack/Notion/メール）用の相談方針
-    consultFocus: '定着・現場課題・受入体制の再設計の相談',
+    consultFocus: '増員・横展開・制度整備の相談',
+  },
+  current_some_issues: {
+    resultComment: '御社はすでに外国人材を雇用・運用していますが、現場コミュニケーションや定着面に改善余地がある状態です。小さな違和感を放置すると、離職や現場の疲弊につながりやすいため、早めに受入体制と現場支援を見直すことが重要です。',
+    teaserSupplement: 'この分析をもとに、定着と現場コミュニケーション改善の具体策が分かります。',
+    ctaLabel: '外国人材活用の課題を相談する',
+    ctaNote:  '現在の課題を整理し、定着・現場コミュニケーションの改善策を一緒に検討します。',
+    consultFocus: '定着・現場コミュニケーション改善の相談',
+  },
+  current_major_issues: {
+    resultComment: '現在の外国人材活用には、受入体制の大きな見直しが必要な状態です。課題の多くは外国人材そのものではなく、受入設計・教育・現場支援の不足から生じている可能性があります。まずは課題を整理し、受入体制を再設計することが先決です。',
+    teaserSupplement: 'この分析をもとに、課題の整理と受入体制再設計の方向性が分かります。',
+    ctaLabel: '受入体制の再設計を相談する',
+    ctaNote:  '早急に課題を整理し、受入設計・教育・現場支援の再設計を一緒に進めます。',
+    consultFocus: '早急な課題整理・受入体制再設計の相談',
+  },
+  past_not_current: {
+    resultComment: '御社は過去に外国人材を雇用した経験があります。当時うまくいかなかった原因は、外国人材そのものではなく、職務設計・支援体制・現場理解に改善余地があった可能性があります。失敗体験を整理することで、再チャレンジすべきかどうかも含めて冷静に判断できます。',
+    teaserSupplement: 'この分析をもとに、過去の失敗原因の整理と再チャレンジ可否の判断材料が分かります。',
+    ctaLabel: '過去の失敗原因を相談する',
+    ctaNote:  '過去の失敗原因を整理し、再チャレンジの可否と進め方を一緒に判断します。',
+    consultFocus: '失敗原因分析・再チャレンジ可否の相談',
   },
   inexperienced: {
-    resultComment: '御社はこれから外国人材の雇用を検討する段階です。採用前に、職務内容、在留資格、教育担当者、生活支援、入社後90日の定着設計を整えることで、採用後のミスマッチや早期離職を防ぎやすくなります。',
-    teaserSupplement: 'この分析をもとに、採用前に整えるべき受入体制と採用後90日の設計の方向性が分かります。',
+    resultComment: '御社はこれから外国人材の雇用を検討する段階です。重要なのは「採用できるか」よりも「受け入れられる体制があるか」です。在留資格・職務設計・教育担当者・生活支援・入社後90日の定着設計を採用前に整えることで、ミスマッチや早期離職を防ぎやすくなります。',
+    teaserSupplement: 'この分析をもとに、採用前に整えるべき受入体制と入社後90日の設計の方向性が分かります。',
     ctaLabel: '外国人材の受入準備を相談する',
     ctaNote:  '採用前に整えるべき体制や在留資格、入社後90日の定着設計について相談できます。',
-    consultFocus: '受入準備・在留資格・入社後90日の定着設計の相談',
+    consultFocus: '受入準備・在留資格・90日設計の相談',
   },
 };
 
@@ -719,9 +797,9 @@ const CheckPage = {
     this.metaIdx    = 0;
     this.preIdx     = 0;
 
-    // 冒頭メタ（雇用経験）が未回答なら 'pre' フェーズから開始。
+    // 冒頭メタ（雇用経験など）に未回答の表示対象があれば 'pre' フェーズから開始。
     // 回答済み（途中再開）なら従来どおり採点設問から（後方互換）。
-    const preUnanswered = PRE_META_QUESTIONS.some(
+    const preUnanswered = this.visiblePreMeta().some(
       m => m.required && this.meta[m.key] === undefined
     );
     this.phase = (PRE_META_QUESTIONS.length > 0 && preUnanswered) ? 'pre' : 'questions';
@@ -880,10 +958,10 @@ const CheckPage = {
       saveCurrentIndex(this.currentIdx);
       this.render();
     } else if (PRE_META_QUESTIONS.length > 0) {
-      // 先頭の採点設問 → 冒頭メタ（雇用経験）へ戻る
+      // 先頭の採点設問 → 冒頭メタの最後の表示対象設問へ戻る
       clearTimeout(this._autoAdvanceTimer);
       this.phase  = 'pre';
-      this.preIdx = PRE_META_QUESTIONS.length - 1;
+      this.preIdx = Math.max(this.visiblePreMeta().length - 1, 0);
       this.renderPre();
     }
   },
@@ -911,13 +989,26 @@ const CheckPage = {
     }
   },
 
-  /* ---- 冒頭メタ（雇用経験）フェーズ ---- */
+  /* ---- 冒頭メタ（雇用経験・活用状況）フェーズ ---- */
+
+  /**
+   * 現在の回答状態で表示対象となる冒頭メタ設問の一覧
+   * （showIf 条件付き設問＝Q2活用状況は、Q1が「現在雇用している」のときだけ含まれる）
+   */
+  visiblePreMeta() {
+    return PRE_META_QUESTIONS.filter(m => !m.showIf || m.showIf(this.meta));
+  },
+
   renderPre() {
-    const m = PRE_META_QUESTIONS[this.preIdx];
+    const list = this.visiblePreMeta();
+    // 回答変更で表示対象が減った場合に備えてインデックスを安全側に丸める
+    if (this.preIdx >= list.length) this.preIdx = Math.max(list.length - 1, 0);
+    const m = list[this.preIdx];
 
     // 採点設問の前なのでプログレスは0%スタート
     document.getElementById('progress-fill').style.width = '0%';
-    document.getElementById('progress-label').textContent = '最初の質問';
+    document.getElementById('progress-label').textContent =
+      list.length > 1 ? `事前確認 ${this.preIdx + 1} / ${list.length}` : '最初の質問';
     const pctEl = document.getElementById('progress-count');
     if (pctEl) pctEl.textContent = '0% 完了';
 
@@ -960,11 +1051,12 @@ const CheckPage = {
   },
 
   nextPre() {
-    const m = PRE_META_QUESTIONS[this.preIdx];
+    const list = this.visiblePreMeta();
+    const m = list[this.preIdx];
     // 必須ガード（未選択では進めない）
-    if (m.required && this.meta[m.key] === undefined) return;
+    if (m && m.required && this.meta[m.key] === undefined) return;
 
-    if (this.preIdx < PRE_META_QUESTIONS.length - 1) {
+    if (this.preIdx < list.length - 1) {
       this.preIdx++;
       this.renderPre();
     } else {
@@ -1031,6 +1123,11 @@ const CheckPage = {
 
   onMetaSelect(key, value) {
     this.meta[key] = value;
+    // 雇用経験を「現在雇用している」以外に変更した場合、
+    // 条件付きQ2（活用状況）の回答は無効になるため破棄する（誤分類防止）
+    if (key === 'employment_experience' && value !== 'current') {
+      delete this.meta.foreign_talent_status;
+    }
     saveMeta(this.meta);
     document.getElementById('btn-next').disabled = false;
     // 任意計測（既存イベントと並走・互換維持）
@@ -1097,7 +1194,9 @@ const ResultPage = {
   companyTypeKey: 'growth_driving',
   axisScores:     null,  // v4.0: 4軸スコア情報
   experience:     '',        // 雇用経験（current / past / none_considering / ''）
+  talentStatus:   '',        // 活用状況（working_well / some_issues / major_issues / ''）
   route:          'unknown', // 診断ルート（experienced / inexperienced / unknown）
+  segment:        'unknown', // 顧客分類（current_well 等 / unknown）
 
   init() {
     this.answers = loadAnswers();
@@ -1115,11 +1214,13 @@ const ResultPage = {
     this.axisScores     = this.calcAxisScores();                    // v4.0
     this.companyTypeKey = getCompanyType(this.rate, this.axisScores); // v4.0
 
-    // 雇用経験ルート（送信後の clearMeta() に備え、init 時点で確定保持する）
+    // 雇用経験・活用状況・顧客分類（送信後の clearMeta() に備え、init 時点で確定保持する）
     // 既存データ（メタ未保存）の場合は 'unknown' となり、表示は従来のまま
-    const meta      = (typeof loadMeta === 'function') ? loadMeta() : {};
-    this.experience = (meta && meta.employment_experience) || '';
-    this.route      = getExperienceRoute(meta);
+    const meta        = (typeof loadMeta === 'function') ? loadMeta() : {};
+    this.experience   = (meta && meta.employment_experience) || '';
+    this.talentStatus = (meta && meta.foreign_talent_status) || '';
+    this.route        = getExperienceRoute(meta);
+    this.segment      = getCustomerSegment(meta);
 
     // Phase3.2: utm_* / gclid を取り込み・保存（直接URLアクセス対応）
     if (typeof saveAdsParams === 'function')   saveAdsParams();
@@ -1629,19 +1730,29 @@ const ResultPage = {
     // 診断メタ（立場 role など）を汎用集合としてまとめて同梱。
     // 取得失敗・空でも {} となり送信はブロックしない（4-1）。
     // 将来 timeline 等を足す場合も META_QUESTIONS に定義を足すだけで自動的にここへ乗る。
-    const meta = (typeof loadMeta === 'function') ? loadMeta() : {};
+    const meta    = (typeof loadMeta === 'function') ? loadMeta() : {};
+    const route   = getExperienceRoute(meta);
+    const segment = getCustomerSegment(meta);
+    // HubSpot連携用: 派生値（顧客分類）も meta に同梱して既存のGASマッピング機構に乗せる。
+    // unknown は書き込まない（既存コンタクトの分類を「不明」で上書きしない）
+    const hsMeta = Object.assign({}, meta);
+    if (segment !== 'unknown') hsMeta.customer_segment = segment;
     return {
       timestamp:        new Date().toISOString(),
       variant:          'new',  // v6.0: A/Bテスト用識別子
-      meta:             meta,   // { role: 'executive', employment_experience: 'current', ... } — GAS側でHubSpotプロパティへマッピング
-      // 雇用経験（Q1）— Slack通知・Notion・メール等でmetaを掘らずに使えるようトップレベルにも展開
+      meta:             hsMeta, // { role, employment_experience, foreign_talent_status, customer_segment } — GAS側でHubSpotプロパティへマッピング
+      // 雇用経験（Q1）・活用状況（Q2）・顧客分類 — Slack通知・Notion・メール等で
+      // metaを掘らずに使えるようトップレベルにも展開。
       // 未回答・既存データでは空文字 / 'unknown'（GAS側でのnull安全を担保）
       employmentExperience:      (meta && meta.employment_experience) || '',
       employmentExperienceLabel: EXPERIENCE_LABELS[(meta && meta.employment_experience)] || '',
-      experienceRoute:           getExperienceRoute(meta),
-      // 通知用: ルート表示名（経験者/未経験。unknownは空文字）と相談方針
-      experienceRouteLabel:      EXPERIENCE_ROUTE_LABELS[getExperienceRoute(meta)] || '',
-      consultFocus:              (ROUTE_CONTENT[getExperienceRoute(meta)] || {}).consultFocus || '',
+      foreignTalentStatus:       (meta && meta.foreign_talent_status) || '',
+      foreignTalentStatusLabel:  STATUS_LABELS[(meta && meta.foreign_talent_status)] || '',
+      customerSegment:           segment,
+      customerSegmentLabel:      SEGMENT_LABELS[segment] || '',
+      experienceRoute:           route,
+      experienceRouteLabel:      EXPERIENCE_ROUTE_LABELS[route] || '',
+      consultFocus:              (SEGMENT_CONTENT[segment] || {}).consultFocus || '',
       score:            this.score,
       rate:             this.rate,
       rating:           this.rating,
@@ -2138,15 +2249,15 @@ ResultPage.renderLockedBlurCards = function () {
 };
 
 /**
- * 雇用経験ルート別の文言を結果画面へ反映（出し分けの土台）
- * 診断名・成功確率キャプションは全ルート共通（出し分けない）。
- * route が unknown（既存データ・未回答）の場合は何もしない＝既存の汎用表示のまま
+ * 顧客分類別の文言を結果画面へ反映（商談前分類の出し分け）
+ * 診断名・成功確率キャプションは全分類共通（出し分けない）。
+ * segment が unknown（既存データ・未回答）の場合は何もしない＝既存の汎用表示のまま
  */
-ResultPage.applyRouteContent = function () {
-  const c = ROUTE_CONTENT[this.route];
+ResultPage.applySegmentContent = function () {
+  const c = SEGMENT_CONTENT[this.segment];
   if (!c) return;
 
-  // ルート別の結果コメント（unknown時は非表示のまま）
+  // 分類別の結果コメント（unknown時は非表示のまま）
   const rcEl = document.getElementById('route-comment');
   if (rcEl && c.resultComment) {
     rcEl.textContent = c.resultComment;
@@ -2398,10 +2509,13 @@ ResultPage.buildReportHTML = function (formData) {
     ? `雇用中（${formData.foreignCount ? formData.foreignCount + '名' : '人数未入力'}）`
     : '現在雇用なし';
 
-  // 雇用経験（Q1）— 未回答・既存データでは空文字となり、行ごと非表示にする
+  // 雇用経験（Q1）・活用状況（Q2）— 未回答・既存データでは空文字となり、行ごと非表示にする
   const experienceText = EXPERIENCE_LABELS[this.experience] || '';
-  // ルート別コメント（結果画面と同文言。unknown はノートなし＝既存レイアウトのまま）
-  const routeFocusNote = (ROUTE_CONTENT[this.route] || {}).resultComment || '';
+  const statusText     = STATUS_LABELS[this.talentStatus] || '';
+  // 顧客分類別コメント（結果画面と同文言。unknown はノートなし＝既存レイアウトのまま）
+  const segContent       = SEGMENT_CONTENT[this.segment] || {};
+  const segmentFocusNote = segContent.resultComment || '';
+  const consultFocusText = segContent.consultFocus || '';
 
   // 企業タイプ
   const companyType = COMPANY_TYPES[this.companyTypeKey] || COMPANY_TYPES['growth_driving'];
@@ -2595,6 +2709,8 @@ ResultPage.buildReportHTML = function (formData) {
            <div style="font-weight:600;color:#1f2937;font-size:13px;">${formData.employees || '—'}</div></div>
       ${experienceText ? `<div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">雇用経験</div>
            <div style="font-weight:600;color:#1f2937;font-size:13px;">${experienceText}</div></div>` : ''}
+      ${statusText ? `<div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">活用状況</div>
+           <div style="font-weight:600;color:#1f2937;font-size:13px;">${statusText}</div></div>` : ''}
       <div${(formData.challenges || experienceText) ? '' : ' style="grid-column:1/-1"'}>
            <div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">外国人雇用</div>
            <div style="font-weight:600;color:#1f2937;font-size:13px;">${foreignInfo}</div></div>
@@ -2602,10 +2718,10 @@ ResultPage.buildReportHTML = function (formData) {
            <div style="font-size:12px;color:#374151;">${formData.challenges}</div></div>` : ''}
     </div>
 
-    ${routeFocusNote ? `<!-- 診断の観点（雇用経験ルート別） -->
+    ${segmentFocusNote ? `<!-- 診断の観点（顧客分類別） -->
     <div style="background:#f9fafb;border-left:3px solid #1a5c3a;padding:10px 14px;border-radius:6px;
                 font-size:11px;color:#374151;line-height:1.7;margin-bottom:18px;">
-      ${routeFocusNote}
+      ${segmentFocusNote}
     </div>` : ''}
 
     <!-- ① 診断結果サマリー -->
@@ -2751,6 +2867,10 @@ ResultPage.buildReportHTML = function (formData) {
       <div style="font-size:13px;font-weight:900;margin-bottom:10px;line-height:1.5;">
         この診断結果をもとに、貴社に最適な外国人材活用の設計を個別に整理できます
       </div>
+      ${consultFocusText ? `<div style="display:inline-block;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);
+                  border-radius:50px;padding:5px 16px;font-size:11px;font-weight:700;margin-bottom:12px;">
+        ご相談の方向性：${consultFocusText}
+      </div>` : ''}
       <ul style="list-style:none;padding:0;margin:0 0 12px;text-align:left;display:inline-block;">
         <li style="font-size:11px;opacity:0.88;line-height:1.7;padding:3px 0;">
           ✓ 診断で検出されたリスクへの具体的な改善策をご提案します
@@ -3095,7 +3215,7 @@ ResultPage.renderCtaMessages = function () {
 const _origRender = ResultPage.render.bind(ResultPage);
 ResultPage.render = function () {
   _origRender();
-  this.applyRouteContent();         // 雇用経験ルート別の文言反映（unknown は既存表示）
+  this.applySegmentContent();       // 顧客分類別の文言反映（unknown は既存表示）
   // v6.0: 無料エリアではロックUIのみ描画。詳細分析はフォーム送信後に描画する
   this.renderLockedPreview();       // リスク件数をロックUIに反映
   this.renderLockedBlurCards();     // v6.0: 4軸ぼかしカードに実スコアをセット

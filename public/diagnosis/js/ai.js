@@ -96,6 +96,10 @@
       foreignRatio:    e.foreignRatio    || '',
       foreignEmployed: e.foreignEmployed || '',
       companyName:     e.companyName     || '',
+      // 商談前の顧客分類（2026-06）: AIコメントの文脈出し分けに使用
+      employmentExperience: rp.experience    || '',
+      foreignTalentStatus:  rp.talentStatus  || '',
+      customerSegment:      rp.segment       || '',
     };
   }
 
