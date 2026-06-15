@@ -175,11 +175,13 @@ const QUESTIONS = [
  * operation : 現場運用（Q3, Q5）
  * retention : 定着・育成（Q4, Q7, Q8）
  */
+// 軸ラベルは経営者向けの表現に統一（戦略設計／受入体制／現場運用／定着支援）。
+// ※内部キー（strategy/structure/operation/retention）と採点ロジックは不変。表示名のみ。
 const AXIS_LABELS = {
-  strategy:  { label: '戦略',     desc: '目的・方針の明確さ',           icon: '🎯', color: '#1a5c3a', bg: '#edf7f1', border: '#a7e3bf' },
+  strategy:  { label: '戦略設計', desc: '目的・方針の明確さ',           icon: '🎯', color: '#1a5c3a', bg: '#edf7f1', border: '#a7e3bf' },
   structure: { label: '受入体制', desc: '制度・社内支援・役割設計',       icon: '🏗',  color: '#1e40af', bg: '#eff6ff', border: '#93c5fd' },
   operation: { label: '現場運用', desc: '教育・コミュニケーション・業務運用', icon: '⚙️',  color: '#92400e', bg: '#fffbeb', border: '#fcd34d' },
-  retention: { label: '定着・育成', desc: '面談・評価・育成設計',         icon: '🌱',  color: '#6b21a8', bg: '#faf5ff', border: '#c4b5fd' },
+  retention: { label: '定着支援', desc: '面談・評価・育成設計',         icon: '🌱',  color: '#6b21a8', bg: '#faf5ff', border: '#c4b5fd' },
 };
 
 /* スコア → 成功確率のルックアップ */
@@ -209,6 +211,16 @@ const RATING_LABELS = {
   A: 'Aランク（戦力化・定着の基盤あり）',
   B: 'Bランク（受入・運用設計の改善余地あり）',
   C: 'Cランク（戦力化・定着に課題あり）',
+};
+
+/**
+ * 成功確率の直下に出す「経営者が次に取るべき認識」（評価別・1行）
+ * 27%等の数値が「良いのか悪いのか」を即座に伝える危機/打ち手フレーム。
+ */
+const RATING_VERDICT = {
+  A: '受入・定着の基盤は良好。設計精度の維持が次の打ち手です',
+  B: '受入体制・運用設計の見直しが必要な状態です',
+  C: '早期離職リスクが高い状態です。受入体制の改善が急務です',
 };
 
 /* 総評コメント（評価ランク別・フォールバック用） */
@@ -1521,11 +1533,9 @@ const ResultPage = {
       if (formWrap) formWrap.style.display = 'none';
       document.getElementById('thanks-msg').classList.add('show');
 
-      // v6.0: ロックUIを非表示にする
-      const lockedAxis  = document.getElementById('locked-axis-preview');
-      const lockedRisks = document.getElementById('locked-risks-preview');
-      if (lockedAxis)  lockedAxis.style.display = 'none';
-      if (lockedRisks) lockedRisks.style.display = 'none';
+      // フォーム前のレポートプレビューを非表示にする（送信後は完全版を表示するため）
+      const reportPreview = document.getElementById('report-preview-section');
+      if (reportPreview) reportPreview.style.display = 'none';
 
       // PDF セクション & 完全版分析 & 相談CTA を表示
       const pdfSection         = document.getElementById('pdf-section');
@@ -2031,6 +2041,16 @@ const NEXT_STEPS = {
 };
 
 /**
+ * 改善提案PDF用：固定3項目（NEXT_STEPS.items）に対応する「最初の一歩」「期待効果」。
+ * ※診断データには依存しない静的アドバイス（items と同じ並び順）。推測スコアは生成しない。
+ */
+const NEXT_STEP_DETAILS = [
+  { firstStep: '「人員補充」か「戦力化」かを、経営として一文で定義する', effect: '受入・評価・定着設計すべての判断軸が定まる' },
+  { firstStep: '受入責任者を1名決め、役割と権限を明文化する',           effect: '問題発生時に現場が止まらず動ける体制になる' },
+  { firstStep: '教育・面談・評価・現場フォローの運用フローを1枚に整理する', effect: '早期離職と教育コストの無駄を抑えられる' },
+];
+
+/**
  * 評価別CTAメッセージ（v2.2 追加）
  * ─────────────────────────────────────────────
  * CTA①（軽め／リスク確認後の入口）と
@@ -2256,43 +2276,106 @@ function getRiskAlertMessage(scoreGap, grade) {
 }
 
 /* =============================================
-   v3.0 追加：ロックプレビューのリスク件数表示
+   フォーム前「レポートプレビュー」描画（実データ・公開範囲限定）
+   ─────────────────────────────────────────────
+   公開 : 成功確率 / 評価 / レーダー / 各軸スコア / リスク件数 / 優先改善TOP3タイトル
+   ゲート: リスク詳細・改善アクション詳細・ROI試算・PDF本体（フォーム送信後）
+   ※診断ロジック非変更。this.rate / rating / axisScores / risks / NEXT_STEPS を読むだけ。
    ============================================= */
 
 /**
- * 簡易結果の「ロックされたプレビュー」にリスク件数を表示
+ * 「このような診断レポートを無料で受け取れます」プレビューカードを実データで描画。
+ * 対象: #report-preview-card（result.html）
  */
-ResultPage.renderLockedPreview = function () {
-  // v6.0: 旧IDとの互換 + 新ID
-  const el  = document.getElementById('locked-risk-count');
-  const el2 = document.getElementById('locked-risk-count-v6');
-  if (el)  el.textContent = this.risks.length;
-  if (el2) el2.textContent = this.risks.length;
-};
+ResultPage.renderReportPreview = function () {
+  const card = document.getElementById('report-preview-card');
+  if (!card) return;
 
-/**
- * v6.0: ロック済み4軸プレビュー（ぼかしカード）に実スコアをセット
- */
-ResultPage.renderLockedBlurCards = function () {
-  if (!this.axisScores) return;
-  const axisMap = [
-    { key: 'strategy',  label: '戦略設計' },
-    { key: 'structure', label: '受入体制' },
-    { key: 'operation', label: '現場運用' },
-    { key: 'retention', label: '定着支援' },
-  ];
-  const container = document.getElementById('blur-axis-cards');
-  if (!container) return;
+  const ratingColors = {
+    A: { bg: '#edf7f1', color: '#1a5c3a', border: '#a7e3bf' },
+    B: { bg: '#fffbeb', color: '#92400e', border: '#fcd34d' },
+    C: { bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
+  };
+  const rc = ratingColors[this.rating] || ratingColors['B'];
 
-  container.innerHTML = axisMap.map(a => {
-    const rate = this.axisScores[a.key + 'Rate'] || 0;
+  // 4軸スコアバー（レーダー併記）
+  const AXES = ['strategy', 'structure', 'operation', 'retention'];
+  const ax   = this.axisScores || {};
+  const barsHTML = AXES.map(a => {
+    const info = AXIS_LABELS[a];
+    const rate = (ax[a + 'Rate'] != null) ? ax[a + 'Rate'] : 0;
+    const bc   = rate < 45 ? '#b91c1c' : rate < 65 ? '#d97706' : '#1a5c3a';
     return `
-      <div class="blur-preview-card">
-        <div class="blur-preview-card-label">${a.label}</div>
-        <div class="blur-preview-card-value">${rate}%</div>
-        <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:${rate}%"></div></div>
+      <div class="rp-bar-row">
+        <span class="rp-bar-label">${info.label}</span>
+        <span class="rp-bar-track"><span class="rp-bar-fill" style="width:${rate}%;background:${bc};"></span></span>
+        <span class="rp-bar-val" style="color:${bc};">${rate}%</span>
       </div>`;
   }).join('');
+
+  // レーダー（PDFと同じ canvas→PNG ロジックを共通利用）
+  const radarURL = (typeof buildRadarDataURL === 'function')
+    ? buildRadarDataURL(this.axisScores, { size: 200, dpr: 2 }) : '';
+  const radarHTML = radarURL
+    ? `<img src="${radarURL}" alt="4軸レーダーチャート" class="rp-radar-img" width="150" height="150">`
+    : '';
+
+  // リスク件数（詳細はゲート）
+  const riskCount = this.risks.length;
+  const riskStrip = riskCount > 0
+    ? `<div class="rp-strip rp-strip--risk"><span class="rp-strip-ico">⚠</span><span><strong>${riskCount}件</strong>のリスクを検出 <span class="rp-strip-lock">🔒 内容はレポートで</span></span></div>`
+    : `<div class="rp-strip rp-strip--ok"><span class="rp-strip-ico">✓</span><span>大きなリスクは検出されていません</span></div>`;
+
+  // 優先改善TOP3（タイトルのみ・詳細はゲート）
+  const impHTML = NEXT_STEPS.items.slice(0, 3).map((it, i) =>
+    `<li class="rp-imp-item"><span class="rp-imp-num">${i + 1}</span><span class="rp-imp-title">${it.title}</span></li>`
+  ).join('');
+
+  // 経営者向け「認識」1行（成功確率が良いのか悪いのかを即伝える）
+  const verdictIco = this.rating === 'C' ? '⚠' : this.rating === 'B' ? '△' : '✓';
+  const verdictMsg = RATING_VERDICT[this.rating] || RATING_VERDICT['B'];
+
+  // 想定損失額（簡易・先出し）。※ROI試算の詳細・改善内容はフォーム送信後に限定
+  let lossRange = '';
+  try {
+    const cost = (typeof calcAttritionCost === 'function') ? calcAttritionCost('_default', this.rating) : null;
+    if (cost && typeof fmtManyen === 'function') lossRange = fmtManyen(cost.min) + '〜' + fmtManyen(cost.max);
+  } catch (_) {}
+  const lossHTML = lossRange
+    ? `<div class="rp-loss">
+         <span class="rp-loss-label">想定損失額（早期離職・1名あたり概算）</span>
+         <span class="rp-loss-val">${lossRange}</span>
+         <span class="rp-loss-note">採用費・教育費・離職（再採用）コストを含む概算</span>
+       </div>`
+    : '';
+
+  card.innerHTML = `
+    <div class="rp-head">
+      <div class="rp-rate">
+        <span class="rp-rate-num">${this.rate}</span><span class="rp-rate-unit">%</span>
+        <span class="rp-rate-cap">戦力化・定着 成功確率</span>
+      </div>
+      <div class="rp-rate-side">
+        <span class="rp-rating-badge" style="background:${rc.bg};color:${rc.color};border-color:${rc.border};">総合評価：${RATING_LABELS[this.rating] || this.rating + 'ランク'}</span>
+        <span class="rp-score">診断スコア ${this.score} / 20点</span>
+      </div>
+    </div>
+    <div class="rp-verdict rp-verdict--${(this.rating || 'b').toLowerCase()}">
+      <span class="rp-verdict-ico">${verdictIco}</span><span>${verdictMsg}</span>
+    </div>
+    <div class="rp-body">
+      <div class="rp-radar">${radarHTML}<span class="rp-radar-cap">4軸バランス</span></div>
+      <div class="rp-bars">
+        <div class="rp-bars-title">4軸スコア</div>
+        ${barsHTML}
+      </div>
+    </div>
+    ${lossHTML}
+    ${riskStrip}
+    <div class="rp-imp">
+      <div class="rp-imp-head">✓ 優先改善 ${NEXT_STEPS.items.length}項目（着手すべき順）</div>
+      <ul class="rp-imp-list">${impHTML}</ul>
+    </div>`;
 };
 
 /**
@@ -2532,11 +2615,111 @@ ResultPage.renderCrisisBlock = function () {
 };
 
 /* =============================================
+   レーダーチャート（4軸）描画ヘルパー
+   ─────────────────────────────────────────────
+   結果プレビュー（live DOM）と PDF（html2canvas）で共通利用。
+   html2canvas の SVG 描画不具合を避けるため canvas→PNG data URL 方式。
+   診断ロジックには非依存（axisScores の達成率%を読むだけ）。
+   ============================================= */
+
+/**
+ * 4軸レーダーチャートを Canvas に描画し PNG の data URL を返す。
+ * @param {object} axisScores - calcAxisScores() の戻り値（*Rate を参照）
+ * @param {object} [opts] - { size, dpr, color, fill, grid }
+ * @returns {string} data:image/png;base64,...（canvas 不可環境では ''）
+ */
+function buildRadarDataURL(axisScores, opts) {
+  opts = opts || {};
+  var size  = opts.size  || 240;            // 論理px（正方）
+  var dpr   = opts.dpr   || 2;              // 解像度倍率（Retina / PDF 高精細）
+  var color = opts.color || '#1a5c3a';      // GTN グリーン（線・頂点）
+  var fill  = opts.fill  || 'rgba(26,92,58,0.16)';
+  var grid  = opts.grid  || '#cbd5e1';
+
+  // 表示順（時計回り・上始まり）。内部キーは不変、表示名は AXIS_LABELS に追従。
+  var axes = ['strategy', 'structure', 'operation', 'retention'];
+
+  var canvas = document.createElement('canvas');
+  canvas.width  = size * dpr;
+  canvas.height = size * dpr;
+  var ctx = canvas.getContext && canvas.getContext('2d');
+  if (!ctx) return '';
+  ctx.scale(dpr, dpr);
+
+  var cx = size / 2;
+  var cy = size / 2;
+  var R  = size * 0.40;                      // ラベルは併記のバーが担うため余白少なめでOK
+  var N  = axes.length;
+  var start = -Math.PI / 2;                   // 頂点を真上から
+
+  function pt(i, r) {
+    var a = start + (Math.PI * 2 * i) / N;
+    return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
+  }
+
+  // 同心グリッド（4段）
+  ctx.lineWidth = 1;
+  for (var g = 1; g <= 4; g++) {
+    var rr = (R * g) / 4;
+    ctx.beginPath();
+    for (var i = 0; i < N; i++) {
+      var p = pt(i, rr);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = grid;
+    ctx.globalAlpha = (g === 4) ? 0.9 : 0.4;
+    ctx.stroke();
+  }
+  // 軸線
+  ctx.globalAlpha = 0.45;
+  for (var j = 0; j < N; j++) {
+    var pe = pt(j, R);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(pe.x, pe.y);
+    ctx.strokeStyle = grid;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // データポリゴン
+  var ax = axisScores || {};
+  function rateAt(i) {
+    var v = ax[axes[i] + 'Rate'];
+    return Math.max(0, Math.min(100, (typeof v === 'number' ? v : 0)));
+  }
+  ctx.beginPath();
+  for (var k = 0; k < N; k++) {
+    var pk = pt(k, (R * rateAt(k)) / 100);
+    if (k === 0) ctx.moveTo(pk.x, pk.y); else ctx.lineTo(pk.x, pk.y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 頂点ドット
+  for (var m = 0; m < N; m++) {
+    var pm = pt(m, (R * rateAt(m)) / 100);
+    ctx.beginPath();
+    ctx.arc(pm.x, pm.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  try { return canvas.toDataURL('image/png'); }
+  catch (e) { return ''; }
+}
+
+/* =============================================
    v3.0 追加：PDF レポート HTML 生成
    ============================================= */
 
 /**
- * 診断レポートのHTML文字列を生成する（v5.0 改訂：セクション構成・ページ分断防止）
+ * 診断レポートのHTML文字列を生成する（経営ダッシュボード型・3ページ構成）
  * @param {object} formData - getFormData() の戻り値
  * @returns {string} 完全なHTML文字列
  */
@@ -2544,7 +2727,9 @@ ResultPage.buildReportHTML = function (formData) {
   const now     = new Date();
   const dateStr = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日';
   const cost    = calcAttritionCost('_default', this.rating);
+  const costRange = fmtManyen(cost.min) + '〜' + fmtManyen(cost.max);
 
+  // 評価バッジの配色
   const ratingColors = {
     A: { bg: '#edf7f1', color: '#1a5c3a', border: '#a7e3bf' },
     B: { bg: '#fffbeb', color: '#92400e', border: '#fcd34d' },
@@ -2552,126 +2737,125 @@ ResultPage.buildReportHTML = function (formData) {
   };
   const rc = ratingColors[this.rating] || ratingColors['B'];
 
+  // 現状ステータスの短評（1行・図表中心のため簡潔に）
+  const SHORT_STATUS = {
+    A: '受入・定着の基盤は概ね良好。設計精度の向上が次のテーマです。',
+    B: '土台はあるものの、受入体制・運用設計に改善余地があります。',
+    C: '戦力化・定着に課題あり。受入体制と運用設計の見直しが優先です。',
+  };
+  const shortStatus = SHORT_STATUS[this.rating] || SHORT_STATUS['B'];
+
+  // 会社情報（未回答・既存データは空文字＝表示しない）
   const foreignInfo = formData.foreignEmployed === 'YES'
     ? `雇用中（${formData.foreignCount ? formData.foreignCount + '名' : '人数未入力'}）`
     : '現在雇用なし';
-
-  // 雇用経験（Q1）・活用状況（Q2）— 未回答・既存データでは空文字となり、行ごと非表示にする
-  const experienceText = EXPERIENCE_LABELS[this.experience] || '';
-  const statusText     = STATUS_LABELS[this.talentStatus] || '';
-  // 顧客分類別コメント（結果画面と同文言。unknown はノートなし＝既存レイアウトのまま）
+  // 顧客分類（相談方向性のみ利用。unknown は空）
   const segContent       = SEGMENT_CONTENT[this.segment] || {};
-  const segmentFocusNote = segContent.resultComment || '';
   const consultFocusText = segContent.consultFocus || '';
 
-  // 企業タイプ
-  const companyType = COMPANY_TYPES[this.companyTypeKey] || COMPANY_TYPES['growth_driving'];
-  const typeColorMap = {
-    a: { bg: '#edf7f1', color: '#1a5c3a', border: '#a7e3bf' },
-    b: { bg: '#fffbeb', color: '#92400e', border: '#fcd34d' },
-    c: { bg: '#fff7ed', color: '#9a3412', border: '#fed7aa' },
-    d: { bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
-    e: { bg: '#fef2f2', color: '#7f1d1d', border: '#fca5a5' },
-  };
-  const tc = typeColorMap[companyType.colorKey] || typeColorMap['b'];
+  // レーダー（4軸・PNG data URL／html2canvas 安全）
+  const radarURL = (typeof buildRadarDataURL === 'function')
+    ? buildRadarDataURL(this.axisScores, { size: 200, dpr: 2 }) : '';
 
-  // 同規模比較
-  const peerAvg  = getPeerAverage(formData.employees);
-  const peerDiff = this.rate - peerAvg;
-  const peerDiffText = peerDiff > 0
-    ? `同規模企業平均より +${Math.abs(peerDiff)}pt 上回っており、受入体制の基盤が比較的整っています`
-    : peerDiff < 0
-    ? `同規模企業平均より ${Math.abs(peerDiff)}pt 下回っており、受入・運用設計の見直しが有効です`
-    : '同規模企業平均と同水準です。引き続き体制の維持・改善をおすすめします';
+  // 4軸スコアバー（レーダー併記）
+  const AXES = ['strategy', 'structure', 'operation', 'retention'];
+  const ax   = this.axisScores || {};
+  const axisBarsHTML = AXES.map(a => {
+    const info = AXIS_LABELS[a];
+    const rate = (ax[a + 'Rate'] != null) ? ax[a + 'Rate'] : 0;
+    const bc   = rate < 45 ? '#b91c1c' : rate < 65 ? '#d97706' : '#1a5c3a';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+        <span style="width:62px;font-size:11px;font-weight:700;color:#374151;flex-shrink:0;">${info.label}</span>
+        <span style="flex:1;height:10px;background:#eef2f5;border-radius:5px;overflow:hidden;">
+          <span style="display:block;height:100%;width:${rate}%;background:${bc};border-radius:5px;"></span>
+        </span>
+        <span style="width:34px;font-size:11px;font-weight:800;color:${bc};text-align:right;">${rate}%</span>
+      </div>`;
+  }).join('');
 
-  // GTN基準比較
-  const GTN_BASELINE = 65;
-  const gtnDiff  = this.rate - GTN_BASELINE;
-  const gtnDiffText = gtnDiff > 0
-    ? `GTN推奨基準より +${Math.abs(gtnDiff)}pt 高く、安定した受入体制の基盤が整っています`
-    : gtnDiff < 0
-    ? `GTN推奨基準より ${Math.abs(gtnDiff)}pt 低く、受入体制の整備に改善余地があります。運用設計の見直しが有効です`
-    : 'GTN推奨基準と同水準です。引き続き体制の維持・改善をおすすめします';
-  const gtnDiffBg    = gtnDiff >= 0 ? '#edf7f1' : '#fef2f2';
-  const gtnDiffColor = gtnDiff >= 0 ? '#1a5c3a' : '#991b1b';
+  // リスクの簡易ラベル（既存 level からの決定的マッピング・推測スコアは生成しない）
+  const riskChip = (txt, tone) =>
+    `<span style="display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:${tone.bg};color:${tone.color};white-space:nowrap;">${txt}</span>`;
+  const TONE_HI = { bg: '#fee2e2', color: '#b91c1c' };
+  const TONE_MD = { bg: '#fef3c7', color: '#92400e' };
 
-  // 危機レベル
-  const crisisLevel = getCrisisLevel(this.rate);
-  const crisisMsg   = CRISIS_MESSAGES[crisisLevel];
-  const crisisColorMap = {
-    high: { bg: '#fef2f2', border: '#fecaca', headColor: '#991b1b', impactBg: '#fee2e2' },
-    mid:  { bg: '#fffbeb', border: '#fcd34d', headColor: '#92400e', impactBg: '#fef3c7' },
-    low:  { bg: '#edf7f1', border: '#a7e3bf', headColor: '#1a5c3a', impactBg: '#d1fae5' },
-  };
-  const cc = crisisColorMap[crisisLevel];
-
-  // リスクHTML
-  const riskItemsHTML = this.risks.length > 0
-    ? this.risks.map(r => {
-        const isHigh = r.level === 'high';
+  // PAGE2: リスク詳細カード（重要度で強弱／影響度・緊急度・対応）
+  // ※重要度は既存 level（high/mid）からの決定的マッピング。high は視覚的に強調。
+  const riskCardsHTML = this.risks.length > 0
+    ? this.risks.map((r, i) => {
+        const hi     = r.level === 'high';
+        const tone   = hi ? TONE_HI : TONE_MD;
+        const accent = hi ? '#b91c1c' : '#d97706';
+        const stars  = hi ? '★★★' : '★★☆';
+        const sevLbl = hi ? '重要度：高' : '重要度：中';
         return `
-          <div style="margin-bottom:10px;padding:12px 14px;border-radius:6px;
-                      background:${isHigh ? '#fef2f2' : '#fffbeb'};
-                      border:1px solid ${isHigh ? '#fecaca' : '#fcd34d'};">
-            <div style="font-weight:700;color:${isHigh ? '#b91c1c' : '#92400e'};font-size:13px;">
-              ${isHigh ? '⚠' : '△'} ${r.label}
+          <div style="border:1px solid ${hi ? '#fecaca' : '#e5e7eb'};border-left:6px solid ${accent};border-radius:8px;
+                      padding:11px 14px;margin-bottom:9px;background:${hi ? '#fff5f5' : '#fff'};">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <span style="width:20px;height:20px;border-radius:50%;background:${accent};color:#fff;font-size:10px;font-weight:900;
+                           display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;">${i + 1}</span>
+              <span style="font-weight:700;font-size:12.5px;color:#1f2937;line-height:1.5;flex:1;">${r.label}</span>
+              <span style="font-size:11px;font-weight:800;color:${accent};white-space:nowrap;letter-spacing:0.04em;">${stars}<span style="font-size:8.5px;margin-left:4px;">${sevLbl}</span></span>
             </div>
-            <div style="font-size:12px;color:${isHigh ? '#b91c1c' : '#92400e'};margin-top:4px;opacity:0.85;">
-              ${r.detail}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;padding-left:28px;">
+              ${riskChip('影響度：' + (hi ? '高' : '中'), tone)}
+              ${riskChip('緊急度：' + (hi ? '高' : '中'), tone)}
+              ${riskChip('対応：' + (hi ? '早急' : '計画的'), tone)}
             </div>
+            <div style="font-size:11px;color:#6b7280;line-height:1.65;padding-left:28px;">${r.detail}</div>
           </div>`;
       }).join('')
-    : `<div style="padding:14px;background:#edf7f1;border-radius:6px;color:#1a5c3a;font-size:13px;">
+    : `<div style="padding:14px;background:#edf7f1;border-radius:8px;color:#1a5c3a;font-size:12.5px;line-height:1.6;">
          ✓ 現時点で特定された主要リスクはありません。引き続き受入体制の維持・改善をおすすめします。
        </div>`;
 
-  // 改善ポイントHTML
-  const nextStepsHTML = NEXT_STEPS.items.map((item, i) => `
-    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:10px;
-                padding:13px 15px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
-      <div style="width:26px;height:26px;border-radius:50%;background:#1a5c3a;
-                  color:white;font-size:12px;font-weight:900;display:flex;
-                  align-items:center;justify-content:center;flex-shrink:0;">
-        ${i + 1}
-      </div>
-      <div>
-        <div style="font-weight:700;font-size:13px;color:#1f2937;margin-bottom:3px;">${item.title}</div>
-        <div style="font-size:12px;color:#6b7280;line-height:1.6;">${item.desc}</div>
-      </div>
-    </div>`).join('');
+  // PAGE1: 主なリスクTOP3（件名のみ・コンパクト）
+  const dashRisksHTML = this.risks.length > 0
+    ? this.risks.slice(0, 3).map(r => {
+        const hi = r.level === 'high';
+        return `
+          <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">
+            <span style="font-size:11px;color:${hi ? '#b91c1c' : '#d97706'};line-height:1.5;">${hi ? '⚠' : '△'}</span>
+            <span style="font-size:10.5px;color:#374151;line-height:1.5;">${r.label}</span>
+          </div>`;
+      }).join('')
+    : `<div style="font-size:10.5px;color:#1a5c3a;">✓ 主要リスクなし</div>`;
 
-  // 4軸カードHTML（PDF版：軸ごとの詳細コメント付き）
-  const axisCardsHTML = ['strategy','structure','operation','retention'].map(axis => {
-    const info      = AXIS_LABELS[axis];
-    const rate      = (this.axisScores || {})[axis + 'Rate'] ?? 0;
-    const score     = (this.axisScores || {})[axis + 'Score'] ?? 0;
-    const max       = (this.axisScores || {})[axis + 'Max'] ?? 0;
-    const isWeakest = this.axisScores && this.axisScores.weakestAxis === axis;
-    const barColor  = rate < 45 ? '#b91c1c' : rate < 65 ? '#d97706' : '#1a5c3a';
+  // PAGE1: 優先改善TOP3（タイトルのみ）
+  const dashImprovementsHTML = NEXT_STEPS.items.slice(0, 3).map((it, i) => `
+      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;">
+        <span style="width:15px;height:15px;border-radius:50%;background:#1a5c3a;color:#fff;font-size:9px;font-weight:900;
+                     display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;">${i + 1}</span>
+        <span style="font-size:10.5px;color:#374151;line-height:1.5;font-weight:600;">${it.title}</span>
+      </div>`).join('');
+
+  // PAGE3: 改善提案カード（順位＋最初の一歩＋期待効果）
+  const improvementCardsHTML = NEXT_STEPS.items.map((it, i) => {
+    const d        = NEXT_STEP_DETAILS[i] || {};
+    const rankNote = i === 0 ? '最優先で着手' : i === 1 ? '次に着手' : 'その後に整備';
     return `
-      <div style="background:${info.bg};border:1px solid ${info.border};border-radius:8px;
-                  padding:12px 13px;${isWeakest ? 'outline:2px solid '+info.color+';' : ''}">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-          <span style="font-size:15px;">${info.icon}</span>
-          <span style="font-size:12px;font-weight:700;color:${info.color};">${info.label}</span>
-          ${isWeakest ? `<span style="font-size:10px;font-weight:700;background:${barColor};color:white;padding:4px 10px;border-radius:12px;margin-left:auto;display:inline-block;line-height:1.4;">優先改善</span>` : ''}
-        </div>
-        <div style="font-size:10px;color:#6b7280;margin-bottom:7px;">${info.desc}</div>
-        <div style="height:9px;background:#e5e7eb;border-radius:5px;overflow:hidden;margin-bottom:4px;">
-          <div style="height:100%;width:${rate}%;background:${barColor};border-radius:5px;"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;">
-          <span style="color:#6b7280;">${score} / ${max}点</span>
-          <span style="font-weight:700;color:${info.color};">${rate}%</span>
+      <div style="display:flex;gap:12px;padding:13px 15px;border:1px solid #e5e7eb;border-radius:8px;
+                  margin-bottom:10px;background:#f9fafb;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#1a5c3a;color:#fff;font-size:13px;font-weight:900;
+                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i + 1}</div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+            <span style="font-weight:700;font-size:13px;color:#1f2937;">${it.title}</span>
+            <span style="font-size:9px;font-weight:700;color:#1a5c3a;background:#edf7f1;border-radius:10px;padding:2px 8px;">${rankNote}</span>
+          </div>
+          <div style="font-size:11px;color:#6b7280;line-height:1.6;margin-bottom:6px;">${it.desc}</div>
+          ${d.firstStep ? `<div style="font-size:10.5px;color:#374151;line-height:1.55;"><strong style="color:#1a5c3a;">最初の一歩：</strong>${d.firstStep}</div>` : ''}
+          ${d.effect ? `<div style="font-size:10.5px;color:#374151;line-height:1.55;margin-top:2px;"><strong style="color:#1a5c3a;">期待効果：</strong>${d.effect}</div>` : ''}
         </div>
       </div>`;
-  }).join('\n');
+  }).join('');
 
-  // 最弱軸アドバイスノート（PDF版のみ表示）
+  // PAGE3: 最優先改善軸ノート
   const weakestAxisNote = this.axisScores
-    ? `<div style="background:#f9fafb;border-left:3px solid #1a5c3a;padding:10px 14px;border-radius:6px;
-                   font-size:12px;color:#374151;line-height:1.65;margin-top:10px;">
-        <strong>優先改善軸：${AXIS_LABELS[this.axisScores.weakestAxis]?.label || '—'}</strong>
+    ? `<div style="background:#edf7f1;border-left:4px solid #1a5c3a;padding:12px 15px;border-radius:6px;
+                   font-size:12px;color:#124429;line-height:1.7;margin-bottom:14px;">
+        <strong>最優先改善軸：${AXIS_LABELS[this.axisScores.weakestAxis]?.label || '—'}</strong>
         （${AXIS_LABELS[this.axisScores.weakestAxis]?.desc || '—'}）<br>
         ${AXIS_IMPROVEMENT_NOTES[this.axisScores.weakestAxis] || ''}
       </div>`
@@ -2681,7 +2865,7 @@ ResultPage.buildReportHTML = function (formData) {
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>外国人材活用診断レポート | GTN</title>
+  <title>外国人材活用 診断レポート | GTN</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -2689,7 +2873,7 @@ ResultPage.buildReportHTML = function (formData) {
       font-size: 14px; line-height: 1.7; color: #1f2937; background: #fff;
     }
     .page { max-width: 740px; margin: 0 auto; }
-    /* pdf-block: セクション単位の描画グループ */
+    /* pdf-block: セクション単位の描画グループ（1ブロック=1ページ想定・A4内に収める） */
     .pdf-block {
       padding: 28px 40px;
       background: #fff;
@@ -2698,17 +2882,9 @@ ResultPage.buildReportHTML = function (formData) {
     }
     .pdf-block + .pdf-block { border-top: 1px solid #f0f0f0; }
     .section-title {
-      font-size: 13px; font-weight: 900; color: #1f2937;
-      border-left: 3px solid #1a5c3a; padding-left: 10px; margin-bottom: 13px;
+      font-size: 14px; font-weight: 900; color: #1f2937;
+      border-left: 4px solid #1a5c3a; padding-left: 11px; margin-bottom: 13px;
     }
-    .cost-box {
-      background: #fff8f4; border: 1px solid #fdd5b8; border-radius: 8px;
-      padding: 15px 18px; text-align: center;
-    }
-    .cost-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: #6b7280;
-                  text-transform: uppercase; margin-bottom: 5px; }
-    .cost-value { font-size: 22px; font-weight: 900; color: #a34300; }
-    .cost-note  { font-size: 11px; color: #6b7280; margin-top: 7px; line-height: 1.5; }
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .pdf-block { page-break-inside: avoid; break-inside: avoid; }
@@ -2718,233 +2894,147 @@ ResultPage.buildReportHTML = function (formData) {
 <body>
 <div class="page">
 
-  <!-- ═══ GROUP 1: タイトル ／ 会社情報 ／ 診断サマリー ═══ -->
-  <div class="pdf-block" style="padding-top:36px;">
-    <!-- レポートヘッダー -->
+  <!-- ═══ PAGE 1: 経営ダッシュボード（診断サマリー） ═══ -->
+  <div class="pdf-block" style="padding-top:34px;">
+    <!-- ヘッダー -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;
-                padding-bottom:16px;border-bottom:2px solid #1a5c3a;margin-bottom:18px;">
+                padding-bottom:12px;border-bottom:2px solid #1a5c3a;margin-bottom:14px;">
       <div>
         <span style="background:#1a5c3a;color:#fff;font-size:11px;font-weight:900;
                      padding:4px 8px;border-radius:4px;letter-spacing:0.1em;display:inline-block;">GTN</span>
         <span style="font-size:12px;font-weight:700;color:#1f2937;margin-left:8px;">Global Talent Navi（GTN）</span>
       </div>
-      <div style="text-align:right;font-size:11px;color:#6b7280;">
+      <div style="text-align:right;font-size:10px;color:#6b7280;">
         <div>診断日：${dateStr}</div>
         <div>No：GTN-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${this.score}</div>
       </div>
     </div>
 
-    <!-- レポートタイトル -->
-    <div style="text-align:center;margin-bottom:18px;padding:16px 20px;
+    <!-- タイトル -->
+    <div style="text-align:center;margin-bottom:14px;padding:13px 20px;
                 background:linear-gradient(135deg,#0f3d26,#1a5c3a);border-radius:10px;color:#fff;">
-      <div style="font-size:10px;opacity:0.7;letter-spacing:0.1em;margin-bottom:5px;">FULL REPORT</div>
-      <div style="font-size:18px;font-weight:900;margin-bottom:4px;">外国人材活用診断レポート</div>
-      <div style="font-size:11px;opacity:0.75;">Global Talent Navi（GTN）｜企業別カスタム生成</div>
+      <div style="font-size:10px;opacity:0.75;letter-spacing:0.14em;margin-bottom:4px;">外国人材活用 診断レポート</div>
+      <div style="font-size:17px;font-weight:900;">経営ダッシュボード（診断サマリー）</div>
     </div>
 
-    <!-- 会社情報 -->
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;
-                padding:13px 17px;margin-bottom:18px;
-                display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">会社名</div>
-           <div style="font-weight:600;color:#1f2937;font-size:13px;">${formData.company || '—'}</div></div>
-      <div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">担当者</div>
-           <div style="font-weight:600;color:#1f2937;font-size:13px;">${formData.name || '—'}</div></div>
-      <div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">業種</div>
-           <div style="font-weight:600;color:#1f2937;font-size:13px;">${formData.industry || '—'}</div></div>
-      <div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">従業員数</div>
-           <div style="font-weight:600;color:#1f2937;font-size:13px;">${formData.employees || '—'}</div></div>
-      ${experienceText ? `<div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">雇用経験</div>
-           <div style="font-weight:600;color:#1f2937;font-size:13px;">${experienceText}</div></div>` : ''}
-      ${statusText ? `<div><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">活用状況</div>
-           <div style="font-weight:600;color:#1f2937;font-size:13px;">${statusText}</div></div>` : ''}
-      <div${(formData.challenges || experienceText) ? '' : ' style="grid-column:1/-1"'}>
-           <div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">外国人雇用</div>
-           <div style="font-weight:600;color:#1f2937;font-size:13px;">${foreignInfo}</div></div>
-      ${formData.challenges ? `<div style="grid-column:1/-1"><div style="font-size:9px;color:#6b7280;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px;">現在の課題</div>
-           <div style="font-size:12px;color:#374151;">${formData.challenges}</div></div>` : ''}
+    <!-- 会社情報（コンパクト1段） -->
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:9px 15px;margin-bottom:13px;
+                display:flex;flex-wrap:wrap;gap:5px 20px;font-size:11px;color:#374151;">
+      <span><strong style="color:#6b7280;font-weight:700;">会社名：</strong>${formData.company || '—'}</span>
+      ${formData.name ? `<span><strong style="color:#6b7280;font-weight:700;">担当者：</strong>${formData.name}</span>` : ''}
+      ${formData.industry ? `<span><strong style="color:#6b7280;font-weight:700;">業種：</strong>${formData.industry}</span>` : ''}
+      ${formData.employees ? `<span><strong style="color:#6b7280;font-weight:700;">従業員数：</strong>${formData.employees}</span>` : ''}
+      <span><strong style="color:#6b7280;font-weight:700;">外国人雇用：</strong>${foreignInfo}</span>
     </div>
 
-    ${segmentFocusNote ? `<!-- 診断の観点（顧客分類別） -->
-    <div style="background:#f9fafb;border-left:3px solid #1a5c3a;padding:10px 14px;border-radius:6px;
-                font-size:11px;color:#374151;line-height:1.7;margin-bottom:18px;">
-      ${segmentFocusNote}
-    </div>` : ''}
-
-    <!-- ① 診断結果サマリー -->
-    <div class="section-title">① 診断結果サマリー</div>
-    <div style="display:flex;align-items:center;gap:20px;background:#fff;border:1px solid #e5e7eb;
-                border-radius:10px;padding:17px 20px;margin-bottom:12px;">
-      <div style="font-size:50px;font-weight:900;color:#1a5c3a;line-height:1;">
-        ${this.rate}<span style="font-size:20px;">%</span>
+    <!-- ヒーロー：成功確率 ＋ 評価 ＋ 短評 -->
+    <div style="display:flex;align-items:center;gap:18px;background:#fff;border:1px solid #e5e7eb;
+                border-radius:10px;padding:14px 18px;margin-bottom:12px;">
+      <div style="text-align:center;flex-shrink:0;">
+        <div style="font-size:46px;font-weight:900;color:#1a5c3a;line-height:1;">${this.rate}<span style="font-size:18px;">%</span></div>
+        <div style="font-size:9px;color:#6b7280;margin-top:3px;letter-spacing:0.04em;">戦力化・定着 成功確率</div>
       </div>
-      <div>
-        <div style="display:inline-block;padding:4px 13px;border-radius:50px;font-size:11px;font-weight:800;
-                    background:${rc.bg};color:${rc.color};border:1px solid ${rc.border};margin-bottom:6px;">
+      <div style="flex:1;">
+        <div style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:12px;font-weight:800;
+                    background:${rc.bg};color:${rc.color};border:1px solid ${rc.border};margin-bottom:6px;line-height:1.5;">
           総合評価：${RATING_LABELS[this.rating] || this.rating + 'ランク'}
         </div>
-        <div style="font-size:11px;color:#6b7280;margin-bottom:5px;">診断スコア：${this.score} / 20点</div>
-        <div style="font-size:12px;color:#374151;line-height:1.6;">${COMMENTS[this.rating]}</div>
+        <div style="font-size:11.5px;font-weight:700;color:${rc.color};line-height:1.6;">${this.rating === 'C' ? '⚠ ' : this.rating === 'B' ? '△ ' : '✓ '}${RATING_VERDICT[this.rating] || RATING_VERDICT['B']}</div>
+        <div style="font-size:10.5px;color:#6b7280;margin-top:3px;line-height:1.55;">${shortStatus}</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:3px;">診断スコア：${this.score} / 20点</div>
       </div>
     </div>
-    <div style="background:#edf7f1;border-radius:6px;padding:10px 14px;font-size:12px;color:#124429;line-height:1.65;">
-      ${IMPROVEMENT_NOTES[this.rating] || ''}
-    </div>
-  </div>
 
-  <!-- ═══ GROUP 2: 成功確率・総合評価・タイプ診断 ═══ -->
-  <div class="pdf-block">
-    <!-- ② 企業タイプ診断 -->
-    <div class="section-title">② 外国人雇用タイプ診断</div>
-    <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;
-                background:${tc.bg};border:1px solid ${tc.border};border-radius:8px;margin-bottom:12px;">
-      <div style="font-size:26px;line-height:1;flex-shrink:0;">${companyType.icon}</div>
+    <!-- レーダー ＋ 4軸スコアバー -->
+    <div style="display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e5e7eb;
+                border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+      <div style="flex-shrink:0;text-align:center;">
+        ${radarURL ? `<img src="${radarURL}" width="150" height="150" alt="4軸レーダーチャート" style="display:block;">` : ''}
+        <div style="font-size:9px;color:#9ca3af;margin-top:2px;">4軸バランス</div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:900;color:#1f2937;margin-bottom:9px;border-left:3px solid #1a5c3a;padding-left:8px;">4軸スコア</div>
+        ${axisBarsHTML}
+      </div>
+    </div>
+
+    <!-- 主なリスクTOP3 ／ 優先改善TOP3（2カラム） -->
+    <div style="display:flex;gap:12px;margin-bottom:12px;">
+      <div style="flex:1;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+        <div style="font-size:10.5px;font-weight:900;color:#b91c1c;margin-bottom:8px;">⚠ 主なリスク TOP3（全${this.risks.length}件）</div>
+        ${dashRisksHTML}
+      </div>
+      <div style="flex:1;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+        <div style="font-size:10.5px;font-weight:900;color:#1a5c3a;margin-bottom:8px;">✓ 優先改善 TOP3</div>
+        ${dashImprovementsHTML}
+      </div>
+    </div>
+
+    <!-- 想定損失額（概算） -->
+    <div style="background:#fff8f4;border:1px solid #fdd5b8;border-radius:10px;padding:11px 16px;
+                display:flex;align-items:center;justify-content:space-between;gap:14px;">
       <div>
-        <div style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;
-                    letter-spacing:0.05em;background:#fff;border:1px solid ${tc.border};color:${tc.color};
-                    margin-bottom:5px;">${companyType.badge}</div>
-        <div style="font-size:14px;font-weight:900;color:#1f2937;margin-bottom:4px;">企業タイプ：${companyType.label}</div>
-        <div style="font-size:12px;color:#374151;line-height:1.65;">${companyType.desc}</div>
-        <div style="font-size:12px;color:#374151;line-height:1.65;margin-top:5px;border-top:1px solid ${tc.border};padding-top:5px;">
-          ${TYPE_RESULT_COMMENTS[this.companyTypeKey] || ''}
-        </div>
+        <div style="font-size:9.5px;font-weight:700;letter-spacing:0.04em;color:#6b7280;">想定損失額（外国人材が早期離職した場合・1名あたり概算）</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px;">採用費・教育費・離職（再採用）コストを含む概算</div>
       </div>
+      <div style="font-size:20px;font-weight:900;color:#a34300;white-space:nowrap;">${costRange}</div>
     </div>
   </div>
 
-  <!-- ═══ GROUP 3: 4軸診断サマリー ═══ -->
+  <!-- ═══ PAGE 2: リスク分析 ═══ -->
   <div class="pdf-block">
-    <!-- ③ 4軸診断サマリー -->
-    <div class="section-title">③ 4軸診断サマリー</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      ${axisCardsHTML}
+    <div class="section-title">リスク分析（${this.risks.length}件検出）</div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:13px;line-height:1.65;">
+      検出された各リスクについて、影響度・緊急度・推奨対応を整理しています。<br>
+      具体的な改善策は、無料相談で貴社の状況に合わせてご提案します。
     </div>
+    ${riskCardsHTML}
+  </div>
+
+  <!-- ═══ PAGE 3: 改善提案 ＋ 相談CTA ═══ -->
+  <div class="pdf-block">
+    <div class="section-title">改善提案（優先順位つき）</div>
     ${weakestAxisNote}
-  </div>
+    ${improvementCardsHTML}
 
-  <!-- ═══ GROUP 4: GTN基準比較 ═══ -->
-  <div class="pdf-block">
-    <div class="section-title">④ GTN基準との比較</div>
-    <div style="font-size:11px;color:#6b7280;margin-bottom:11px;">
-      外国人材を安定的に受け入れるためのGTN推奨基準値・同規模企業平均と比較しています
+    <!-- 期待効果まとめ -->
+    <div style="background:#f9fafb;border-radius:8px;padding:11px 15px;font-size:11px;color:#374151;line-height:1.7;margin-bottom:16px;">
+      これらを順に整えることで、受入体制と運用設計が安定し、<strong style="color:#124429;">戦力化・定着の成功確率を高める</strong>ことができます。
     </div>
 
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 17px;margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
-        <div style="width:76px;font-size:11px;color:#374151;font-weight:600;flex-shrink:0;">貴社</div>
-        <div style="flex:1;height:14px;background:#e5e7eb;border-radius:7px;overflow:hidden;">
-          <div style="height:100%;width:${Math.min(this.rate,100)}%;background:#1a5c3a;border-radius:7px;"></div>
-        </div>
-        <div style="width:38px;font-size:12px;font-weight:800;color:#1a5c3a;text-align:right;">${this.rate}%</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
-        <div style="width:76px;font-size:11px;color:#374151;font-weight:600;flex-shrink:0;">GTN基準値</div>
-        <div style="flex:1;height:14px;background:#e5e7eb;border-radius:7px;overflow:hidden;">
-          <div style="height:100%;width:${GTN_BASELINE}%;background:#9ca3af;border-radius:7px;"></div>
-        </div>
-        <div style="width:38px;font-size:12px;font-weight:800;color:#6b7280;text-align:right;">${GTN_BASELINE}%</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:76px;font-size:11px;color:#374151;font-weight:600;flex-shrink:0;">${formData.employees ? formData.employees + '平均' : '業界平均'}</div>
-        <div style="flex:1;height:14px;background:#e5e7eb;border-radius:7px;overflow:hidden;">
-          <div style="height:100%;width:${Math.min(peerAvg,100)}%;background:#d1d5db;border-radius:7px;"></div>
-        </div>
-        <div style="width:38px;font-size:12px;font-weight:800;color:#9ca3af;text-align:right;">${peerAvg}%</div>
-      </div>
-    </div>
-
-    <div style="background:${gtnDiffBg};border-radius:6px;padding:9px 13px;font-size:12px;
-                font-weight:700;color:${gtnDiffColor};margin-bottom:7px;">
-      ${gtnDiffText}
-    </div>
-    <div style="font-size:11px;color:#6b7280;">
-      ${peerDiff !== 0 ? `同規模（${formData.employees || '一般'}）比：${peerDiffText}` : ''}
-    </div>
-  </div>
-
-  <!-- ═══ GROUP 5: 主要リスク分析 ═══ -->
-  <div class="pdf-block">
-    <!-- リスク危機レベル -->
-    <div style="background:${cc.bg};border:1px solid ${cc.border};border-radius:8px;padding:13px 15px;margin-bottom:15px;">
-      <div style="font-size:13px;font-weight:900;color:${cc.headColor};margin-bottom:7px;">${crisisMsg.headline}</div>
-      <div style="font-size:12px;color:#374151;line-height:1.65;margin-bottom:8px;">${crisisMsg.text}</div>
-      <div style="background:${cc.impactBg};border-radius:6px;padding:7px 11px;font-size:11px;
-                  font-weight:700;color:${cc.headColor};display:inline-block;">${crisisMsg.impact}</div>
-    </div>
-
-    <!-- ⑤ 主要リスク分析 -->
-    <div class="section-title">⑤ 主要リスク分析（${this.risks.length}件検出）</div>
-    ${riskItemsHTML}
-  </div>
-
-  <!-- ═══ GROUP 6: 参考離職コスト ═══ -->
-  <div class="pdf-block">
-    <div class="section-title">⑥ 参考離職コスト試算</div>
-    <div class="cost-box">
-      <div class="cost-label">外国人材が早期離職した場合の参考コストレンジ（1名あたり）</div>
-      <div class="cost-value">${fmtManyen(cost.min)}〜${fmtManyen(cost.max)}</div>
-      <div class="cost-note" style="margin-top:10px;line-height:1.75;">
-        ${getAttritionCostMessage(this.rating)}
-      </div>
-      <div class="cost-note" style="margin-top:6px;font-size:11px;color:#9ca3af;">
-        ※ 実際の損失額は職種・採用方法・受入体制により変動します。本値は参考レンジです。
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ GROUP 7: GTN経営コメント ═══ -->
-  <div class="pdf-block">
-    <div class="section-title">⑦ GTN 経営コメント</div>
-    <div style="background:#f9fafb;border-left:3px solid #1a5c3a;border-radius:8px;
-                padding:14px 18px;font-size:13px;color:#374151;line-height:1.85;">
-      ${MANAGEMENT_COMMENTS[this.rating] || ''}
-    </div>
-  </div>
-
-  <!-- ═══ GROUP 8: 優先改善ポイント ═══ -->
-  <div class="pdf-block">
-    <div class="section-title">⑧ ${NEXT_STEPS.heading[this.rating] || '次に整理すべきポイント'}</div>
-    ${nextStepsHTML}
-  </div>
-
-  <!-- ═══ GROUP 9: 無料相談 CTA ／ フッター ═══ -->
-  <div class="pdf-block">
+    <!-- 無料相談 CTA -->
     <div style="background:linear-gradient(135deg,#124429,#1a5c3a);color:#fff;
-                border-radius:10px;padding:22px 28px;margin-bottom:18px;text-align:center;">
+                border-radius:10px;padding:20px 26px;text-align:center;margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;margin-bottom:10px;line-height:1.5;">
-        この診断結果をもとに、貴社に最適な外国人材活用の設計を個別に整理できます
+        この診断結果をもとに、貴社に最適な改善ステップを個別に整理できます
+      </div>
+      <!-- 無料相談でできること（相談予約の価値を明示） -->
+      <div style="display:inline-block;text-align:left;margin:0 auto 11px;">
+        <div style="font-size:10.5px;font-weight:800;margin-bottom:6px;letter-spacing:0.04em;">無料相談でできること</div>
+        <div style="font-size:10.5px;opacity:0.92;line-height:1.95;">
+          <div>✓ 診断結果の解説</div>
+          <div>✓ 優先改善項目の整理</div>
+          <div>✓ 貴社向け改善ロードマップのご提案</div>
+          <div>✓ 外国人材活用に関する質疑応答</div>
+        </div>
       </div>
       ${consultFocusText ? `<div style="display:inline-block;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);
-                  border-radius:50px;padding:5px 16px;font-size:11px;font-weight:700;margin-bottom:12px;">
+                  border-radius:50px;padding:4px 14px;font-size:10px;font-weight:700;margin-bottom:10px;">
         ご相談の方向性：${consultFocusText}
       </div>` : ''}
-      <ul style="list-style:none;padding:0;margin:0 0 12px;text-align:left;display:inline-block;">
-        <li style="font-size:11px;opacity:0.88;line-height:1.7;padding:3px 0;">
-          ✓ 診断で検出されたリスクへの具体的な改善策をご提案します
-        </li>
-        <li style="font-size:11px;opacity:0.88;line-height:1.7;padding:3px 0;">
-          ✓ 採用・定着・受入体制の優先整備ポイントを明確にします
-        </li>
-        <li style="font-size:11px;opacity:0.88;line-height:1.7;padding:3px 0;">
-          ✓ 貴社の業種・規模に合った外国人材活用の設計を一緒に整理します
-        </li>
-      </ul>
-      <div style="font-size:10px;opacity:0.65;margin-bottom:10px;">無料 60分 ／ 秘密厳守 ／ 勧誘はありません</div>
+      <div style="font-size:10px;opacity:0.78;margin-bottom:12px;">無料 60分 ／ オンライン対応 ／ 秘密厳守 ／ 無理な営業なし</div>
       <div data-pdf-link="consult"
            style="display:inline-block;background:#c75200;color:#fff;font-weight:700;
-                  font-size:12px;padding:9px 22px;border-radius:6px;letter-spacing:0.03em;">
+                  font-size:12px;padding:9px 24px;border-radius:6px;letter-spacing:0.03em;">
         ▶ 無料相談を予約する
       </div>
-      <div style="font-size:9px;opacity:0.55;margin-top:8px;word-break:break-all;">
-        ${CONSULT_URL}
-      </div>
-      <div style="font-size:10px;opacity:0.75;margin-top:10px;">
-        メールでのお問い合わせ: info@globaltalent-navi.com
-      </div>
+      <div style="font-size:9px;opacity:0.6;margin-top:8px;word-break:break-all;">${CONSULT_URL}</div>
+      <div style="font-size:10px;opacity:0.78;margin-top:8px;">メールでのお問い合わせ: info@globaltalent-navi.com</div>
     </div>
 
+    <!-- フッター -->
     <div style="padding-top:13px;border-top:1px solid #e5e7eb;
-                font-size:10px;color:#9ca3af;text-align:center;line-height:1.7;">
+                font-size:9px;color:#9ca3af;text-align:center;line-height:1.7;">
       本レポートは Global Talent Navi（GTN）の分析モデルをもとに企業別に自動生成されたものです。<br>
       株式会社フレアー / Global Talent Navi (GTN)｜© 2025 All rights reserved.<br>
       プライバシーポリシー: https://globaltalent-navi.com/privacy
@@ -3263,14 +3353,14 @@ const _origRender = ResultPage.render.bind(ResultPage);
 ResultPage.render = function () {
   _origRender();
   this.applySegmentContent();       // 顧客分類別の文言反映（unknown は既存表示）
-  // v6.0: 無料エリアではロックUIのみ描画。詳細分析はフォーム送信後に描画する
-  this.renderLockedPreview();       // リスク件数をロックUIに反映
-  this.renderLockedBlurCards();     // v6.0: 4軸ぼかしカードに実スコアをセット
-  this.renderRiskHint();            // v6.0: リスク示唆テキスト更新
-  this.renderCostEstimate();        // v7.0: 想定損失額（概算）を表示
-  this.renderLockedRisksPreview();  // v6.0: リスクプレースホルダー更新
+  // フォーム前：実データの「レポートプレビュー」を描画（公開範囲を限定）
+  //   公開 = 成功確率 / 評価 / レーダー / 各軸スコア / リスク件数 / 優先改善TOP3タイトル
+  //   ゲート = リスク詳細・改善アクション詳細・ROI試算・PDF本体（フォーム送信後）
+  this.renderReportPreview();       // 実データのプレビューカード
+  this.renderRiskHint();            // リスク示唆テキスト（件数レベル）
+  this.renderCostEstimate();        // ROI（想定損失）は送信後エリアで表示（描画のみ・親が非表示）
   // NOTE: renderAxisSummary / renderTypeDiagnosis / renderPeerComparison / renderCrisisBlock
-  //       は initForm() 内のフォーム送信後に呼ばれる（v6.0 ゲート方式）
+  //       は initForm() 内のフォーム送信後に呼ばれる（ゲート方式）
 };
 
 /* =============================================
