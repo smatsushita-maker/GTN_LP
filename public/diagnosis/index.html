@@ -128,39 +128,6 @@
         外国人材活用の成功確率とリスクを、約1〜2分で診断
       </p>
 
-      <!-- 業種選択（AI個別最適化用・スコア非影響） -->
-      <div class="industry-select-wrap" id="industry-select-wrap">
-        <p class="industry-select-label">業種を選択してください</p>
-        <p class="industry-select-sub">より実態に近い診断結果を表示するために使用します</p>
-        <div class="industry-select-grid" id="industry-select-grid" role="radiogroup" aria-label="業種選択">
-          <label class="industry-option">
-            <input type="radio" name="industry" value="製造業" /><span>製造業</span>
-          </label>
-          <label class="industry-option">
-            <input type="radio" name="industry" value="食品加工業" /><span>食品加工業</span>
-          </label>
-          <label class="industry-option">
-            <input type="radio" name="industry" value="建設業" /><span>建設業</span>
-          </label>
-          <label class="industry-option">
-            <input type="radio" name="industry" value="物流・倉庫業" /><span>物流・倉庫業</span>
-          </label>
-          <label class="industry-option">
-            <input type="radio" name="industry" value="外食業" /><span>外食業</span>
-          </label>
-          <label class="industry-option">
-            <input type="radio" name="industry" value="宿泊業" /><span>宿泊業</span>
-          </label>
-          <label class="industry-option">
-            <input type="radio" name="industry" value="介護" /><span>介護</span>
-          </label>
-          <label class="industry-option">
-            <input type="radio" name="industry" value="その他" /><span>その他</span>
-          </label>
-        </div>
-        <p class="industry-select-error hidden" id="industry-error">業種を選択してください</p>
-      </div>
-
       <div class="hero-cta-wrap">
         <!-- id="cta-hero" でGA4クリック計測が可能 -->
         <a href="check.html" class="btn btn-cta btn-lg" id="cta-hero"
@@ -469,52 +436,9 @@
       });
     });
 
-    // ⑤ 業種選択バリデーション + 保存（CTAクリック時）
-    (function setupIndustryGate() {
-      var errorEl = document.getElementById('industry-error');
-      var grid    = document.getElementById('industry-select-grid');
-
-      // ラジオ選択時にエラーを消す
-      if (grid) {
-        grid.addEventListener('change', function () {
-          if (errorEl) errorEl.classList.add('hidden');
-          // 選択中のハイライト
-          grid.querySelectorAll('.industry-option').forEach(function (opt) {
-            opt.classList.toggle('selected', opt.querySelector('input').checked);
-          });
-          // Phase2: industry_selected を GA4 へ送信（選択された業種値で発火）
-          var checked = grid.querySelector('input[name="industry"]:checked');
-          if (checked && typeof trackEvent === 'function') {
-            trackEvent('industry_selected', {
-              page_id: 'diag_lp',
-              industry: checked.value,
-              source:   (typeof loadSource === 'function') ? loadSource() : '',
-              ref:      (typeof loadRef    === 'function') ? loadRef()    : '',
-            });
-          }
-        });
-      }
-
-      // 全CTAリンクにバリデーションを追加
-      document.querySelectorAll('a[href^="check.html"]').forEach(function (a) {
-        a.addEventListener('click', function (e) {
-          var checked = document.querySelector('input[name="industry"]:checked');
-          if (!checked) {
-            e.preventDefault();
-            if (errorEl) errorEl.classList.remove('hidden');
-            var wrap = document.getElementById('industry-select-wrap');
-            if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
-          }
-          // 業種を保存（app.js の saveIndustry）
-          if (typeof saveIndustry === 'function') {
-            saveIndustry(checked.value);
-          } else {
-            localStorage.setItem('gtn_risk_industry', checked.value);
-          }
-        });
-      });
-    })();
+    // ⑤ 業種選択は診断開始後のメタ設問（app.js META_QUESTIONS の industry）へ移設済み。
+    //    導入ページの必須ゲートは撤廃（開始率改善）。業種の保存と industry_selected 発火は
+    //    app.js の onMetaSelect 側で実施する。
   </script>
 </body>
 </html>
