@@ -1533,9 +1533,11 @@ const ResultPage = {
       if (formWrap) formWrap.style.display = 'none';
       document.getElementById('thanks-msg').classList.add('show');
 
-      // フォーム前のレポートプレビューを非表示にする（送信後は完全版を表示するため）
+      // フォーム前のレポートプレビュー＋情報ギャップを非表示にする（送信後は完全版を表示するため）
       const reportPreview = document.getElementById('report-preview-section');
       if (reportPreview) reportPreview.style.display = 'none';
+      const diagGap = document.querySelector('.diag-gap-section');
+      if (diagGap) diagGap.style.display = 'none';
 
       // PDF セクション & 完全版分析 & 相談CTA を表示
       const pdfSection         = document.getElementById('pdf-section');
@@ -2326,10 +2328,11 @@ ResultPage.renderReportPreview = function () {
     ? `<div class="rp-strip rp-strip--risk"><span class="rp-strip-ico">⚠</span><span><strong>${riskCount}件</strong>のリスクを検出 <span class="rp-strip-lock">🔒 内容はレポートで</span></span></div>`
     : `<div class="rp-strip rp-strip--ok"><span class="rp-strip-ico">✓</span><span>大きなリスクは検出されていません</span></div>`;
 
-  // 優先改善TOP3（タイトルのみ・詳細はゲート）
-  const impHTML = NEXT_STEPS.items.slice(0, 3).map((it, i) =>
-    `<li class="rp-imp-item"><span class="rp-imp-num">${i + 1}</span><span class="rp-imp-title">${it.title}</span></li>`
-  ).join('');
+  // 「処方箋（改善内容）」はゲート。代わりに完全レポートで得られる価値を提示する。
+  const includeItems = ['優先改善順位', '改善ロードマップ', '定着率向上施策', 'GTN専門家コメント', '改善優先順位の理由', '相談時のアジェンダ'];
+  const includesHTML = includeItems.map(function (t) {
+    return `<li class="rp-inc-item"><span class="rp-inc-check">✓</span><span>${t}</span></li>`;
+  }).join('');
 
   // 経営者向け「認識」1行（成功確率が良いのか悪いのかを即伝える）
   const verdictIco = this.rating === 'C' ? '⚠' : this.rating === 'B' ? '△' : '✓';
@@ -2372,9 +2375,9 @@ ResultPage.renderReportPreview = function () {
     </div>
     ${lossHTML}
     ${riskStrip}
-    <div class="rp-imp">
-      <div class="rp-imp-head">✓ 優先改善 ${NEXT_STEPS.items.length}項目（着手すべき順）</div>
-      <ul class="rp-imp-list">${impHTML}</ul>
+    <div class="rp-includes">
+      <div class="rp-includes-head">完全レポートで分かること</div>
+      <ul class="rp-includes-list">${includesHTML}</ul>
     </div>`;
 };
 
