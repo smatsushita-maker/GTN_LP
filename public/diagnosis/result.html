@@ -500,6 +500,24 @@
     .rp-bar-track { flex: 1; height: 9px; background: #eef2f5; border-radius: 5px; overflow: hidden; }
     .rp-bar-fill { display: block; height: 100%; border-radius: 5px; }
     .rp-bar-val { width: 32px; font-size: 0.72rem; font-weight: 800; text-align: right; }
+    /* 経営者向け「認識」1行 */
+    .rp-verdict {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 0.84rem; font-weight: 700; line-height: 1.5;
+      padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;
+    }
+    .rp-verdict-ico { font-size: 0.95rem; flex-shrink: 0; }
+    .rp-verdict--c { background: #fef2f2; color: #b91c1c; }
+    .rp-verdict--b { background: #fffbeb; color: #92400e; }
+    .rp-verdict--a { background: #edf7f1; color: #1a5c3a; }
+    /* 想定損失額（簡易・先出し） */
+    .rp-loss {
+      background: #fff8f4; border: 1px solid #fdd5b8; border-radius: 8px;
+      padding: 10px 13px; margin-bottom: 12px; text-align: center;
+    }
+    .rp-loss-label { display: block; font-size: 0.68rem; font-weight: 700; color: #6b7280; letter-spacing: 0.03em; }
+    .rp-loss-val { display: block; font-size: 1.3rem; font-weight: 900; color: #a34300; margin: 3px 0 2px; }
+    .rp-loss-note { display: block; font-size: 0.66rem; color: #9ca3af; }
     .rp-strip {
       display: flex; align-items: center; gap: 7px;
       padding: 9px 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 12px;

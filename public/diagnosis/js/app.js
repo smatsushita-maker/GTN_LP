@@ -213,6 +213,16 @@ const RATING_LABELS = {
   C: 'Cランク（戦力化・定着に課題あり）',
 };
 
+/**
+ * 成功確率の直下に出す「経営者が次に取るべき認識」（評価別・1行）
+ * 27%等の数値が「良いのか悪いのか」を即座に伝える危機/打ち手フレーム。
+ */
+const RATING_VERDICT = {
+  A: '受入・定着の基盤は良好。設計精度の維持が次の打ち手です',
+  B: '受入体制・運用設計の見直しが必要な状態です',
+  C: '早期離職リスクが高い状態です。受入体制の改善が急務です',
+};
+
 /* 総評コメント（評価ランク別・フォールバック用） */
 const COMMENTS = {
   A: '受入体制の基盤は比較的整っています。一方で、運用面や定着支援の精度によっては離職リスクが生じる可能性があります。役割分担と運用設計を定期的に見直すことで、さらに戦力化・定着の成功確率を高められます。',
@@ -2321,6 +2331,24 @@ ResultPage.renderReportPreview = function () {
     `<li class="rp-imp-item"><span class="rp-imp-num">${i + 1}</span><span class="rp-imp-title">${it.title}</span></li>`
   ).join('');
 
+  // 経営者向け「認識」1行（成功確率が良いのか悪いのかを即伝える）
+  const verdictIco = this.rating === 'C' ? '⚠' : this.rating === 'B' ? '△' : '✓';
+  const verdictMsg = RATING_VERDICT[this.rating] || RATING_VERDICT['B'];
+
+  // 想定損失額（簡易・先出し）。※ROI試算の詳細・改善内容はフォーム送信後に限定
+  let lossRange = '';
+  try {
+    const cost = (typeof calcAttritionCost === 'function') ? calcAttritionCost('_default', this.rating) : null;
+    if (cost && typeof fmtManyen === 'function') lossRange = fmtManyen(cost.min) + '〜' + fmtManyen(cost.max);
+  } catch (_) {}
+  const lossHTML = lossRange
+    ? `<div class="rp-loss">
+         <span class="rp-loss-label">想定損失額（早期離職・1名あたり概算）</span>
+         <span class="rp-loss-val">${lossRange}</span>
+         <span class="rp-loss-note">採用費・教育費・離職（再採用）コストを含む概算</span>
+       </div>`
+    : '';
+
   card.innerHTML = `
     <div class="rp-head">
       <div class="rp-rate">
@@ -2332,6 +2360,9 @@ ResultPage.renderReportPreview = function () {
         <span class="rp-score">診断スコア ${this.score} / 20点</span>
       </div>
     </div>
+    <div class="rp-verdict rp-verdict--${(this.rating || 'b').toLowerCase()}">
+      <span class="rp-verdict-ico">${verdictIco}</span><span>${verdictMsg}</span>
+    </div>
     <div class="rp-body">
       <div class="rp-radar">${radarHTML}<span class="rp-radar-cap">4軸バランス</span></div>
       <div class="rp-bars">
@@ -2339,6 +2370,7 @@ ResultPage.renderReportPreview = function () {
         ${barsHTML}
       </div>
     </div>
+    ${lossHTML}
     ${riskStrip}
     <div class="rp-imp">
       <div class="rp-imp-head">✓ 優先改善 ${NEXT_STEPS.items.length}項目（着手すべき順）</div>
@@ -2748,25 +2780,30 @@ ResultPage.buildReportHTML = function (formData) {
   const TONE_HI = { bg: '#fee2e2', color: '#b91c1c' };
   const TONE_MD = { bg: '#fef3c7', color: '#92400e' };
 
-  // PAGE2: リスク詳細カード（影響度・緊急度・対応）
+  // PAGE2: リスク詳細カード（重要度で強弱／影響度・緊急度・対応）
+  // ※重要度は既存 level（high/mid）からの決定的マッピング。high は視覚的に強調。
   const riskCardsHTML = this.risks.length > 0
-    ? this.risks.map(r => {
+    ? this.risks.map((r, i) => {
         const hi     = r.level === 'high';
         const tone   = hi ? TONE_HI : TONE_MD;
         const accent = hi ? '#b91c1c' : '#d97706';
+        const stars  = hi ? '★★★' : '★★☆';
+        const sevLbl = hi ? '重要度：高' : '重要度：中';
         return `
-          <div style="border:1px solid #e5e7eb;border-left:4px solid ${accent};border-radius:8px;
-                      padding:11px 14px;margin-bottom:9px;background:#fff;">
-            <div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px;">
-              <span style="font-size:13px;line-height:1.4;color:${accent};">${hi ? '⚠' : '△'}</span>
+          <div style="border:1px solid ${hi ? '#fecaca' : '#e5e7eb'};border-left:6px solid ${accent};border-radius:8px;
+                      padding:11px 14px;margin-bottom:9px;background:${hi ? '#fff5f5' : '#fff'};">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <span style="width:20px;height:20px;border-radius:50%;background:${accent};color:#fff;font-size:10px;font-weight:900;
+                           display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;">${i + 1}</span>
               <span style="font-weight:700;font-size:12.5px;color:#1f2937;line-height:1.5;flex:1;">${r.label}</span>
+              <span style="font-size:11px;font-weight:800;color:${accent};white-space:nowrap;letter-spacing:0.04em;">${stars}<span style="font-size:8.5px;margin-left:4px;">${sevLbl}</span></span>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;padding-left:20px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;padding-left:28px;">
               ${riskChip('影響度：' + (hi ? '高' : '中'), tone)}
               ${riskChip('緊急度：' + (hi ? '高' : '中'), tone)}
               ${riskChip('対応：' + (hi ? '早急' : '計画的'), tone)}
             </div>
-            <div style="font-size:11px;color:#6b7280;line-height:1.65;padding-left:20px;">${r.detail}</div>
+            <div style="font-size:11px;color:#6b7280;line-height:1.65;padding-left:28px;">${r.detail}</div>
           </div>`;
       }).join('')
     : `<div style="padding:14px;background:#edf7f1;border-radius:8px;color:#1a5c3a;font-size:12.5px;line-height:1.6;">
@@ -2902,7 +2939,8 @@ ResultPage.buildReportHTML = function (formData) {
                     background:${rc.bg};color:${rc.color};border:1px solid ${rc.border};margin-bottom:6px;line-height:1.5;">
           総合評価：${RATING_LABELS[this.rating] || this.rating + 'ランク'}
         </div>
-        <div style="font-size:11px;color:#374151;line-height:1.6;">${shortStatus}</div>
+        <div style="font-size:11.5px;font-weight:700;color:${rc.color};line-height:1.6;">${this.rating === 'C' ? '⚠ ' : this.rating === 'B' ? '△ ' : '✓ '}${RATING_VERDICT[this.rating] || RATING_VERDICT['B']}</div>
+        <div style="font-size:10.5px;color:#6b7280;margin-top:3px;line-height:1.55;">${shortStatus}</div>
         <div style="font-size:10px;color:#9ca3af;margin-top:3px;">診断スコア：${this.score} / 20点</div>
       </div>
     </div>
@@ -2936,8 +2974,8 @@ ResultPage.buildReportHTML = function (formData) {
     <div style="background:#fff8f4;border:1px solid #fdd5b8;border-radius:10px;padding:11px 16px;
                 display:flex;align-items:center;justify-content:space-between;gap:14px;">
       <div>
-        <div style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:#6b7280;">想定損失額（早期離職・1名あたり概算）</div>
-        <div style="font-size:10px;color:#9ca3af;margin-top:2px;">採用費・教育費・再採用費を含む参考レンジ</div>
+        <div style="font-size:9.5px;font-weight:700;letter-spacing:0.04em;color:#6b7280;">想定損失額（外国人材が早期離職した場合・1名あたり概算）</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px;">採用費・教育費・離職（再採用）コストを含む概算</div>
       </div>
       <div style="font-size:20px;font-weight:900;color:#a34300;white-space:nowrap;">${costRange}</div>
     </div>
@@ -2967,8 +3005,18 @@ ResultPage.buildReportHTML = function (formData) {
     <!-- 無料相談 CTA -->
     <div style="background:linear-gradient(135deg,#124429,#1a5c3a);color:#fff;
                 border-radius:10px;padding:20px 26px;text-align:center;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:900;margin-bottom:9px;line-height:1.5;">
+      <div style="font-size:13px;font-weight:900;margin-bottom:10px;line-height:1.5;">
         この診断結果をもとに、貴社に最適な改善ステップを個別に整理できます
+      </div>
+      <!-- 無料相談でできること（相談予約の価値を明示） -->
+      <div style="display:inline-block;text-align:left;margin:0 auto 11px;">
+        <div style="font-size:10.5px;font-weight:800;margin-bottom:6px;letter-spacing:0.04em;">無料相談でできること</div>
+        <div style="font-size:10.5px;opacity:0.92;line-height:1.95;">
+          <div>✓ 診断結果の解説</div>
+          <div>✓ 優先改善項目の整理</div>
+          <div>✓ 貴社向け改善ロードマップのご提案</div>
+          <div>✓ 外国人材活用に関する質疑応答</div>
+        </div>
       </div>
       ${consultFocusText ? `<div style="display:inline-block;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);
                   border-radius:50px;padding:4px 14px;font-size:10px;font-weight:700;margin-bottom:10px;">
