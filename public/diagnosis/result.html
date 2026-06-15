@@ -52,14 +52,14 @@
       text-align: left;
     }
 
-    /* ===== 想定損失額（概算）===== */
+    /* ===== 想定損失額（概算）※フォーム送信後の白背景エリアに配置するため明色テーマ ===== */
     .cost-estimate-section {
-      margin-top: 20px;
+      margin: 20px auto 0;
       max-width: 540px;
     }
     .cost-estimate-card {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(232,178,48,0.3);
+      background: #fff8f4;
+      border: 1px solid #fdd5b8;
       border-radius: var(--radius);
       padding: 20px 24px;
       text-align: center;
@@ -69,24 +69,24 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: rgba(255,255,255,0.5);
+      color: #6b7280;
       margin-bottom: 6px;
     }
     .cost-estimate-value {
       font-size: 1.6rem;
       font-weight: 900;
-      color: #e8b230;
+      color: #a34300;
       line-height: 1.3;
     }
     .cost-estimate-note {
       font-size: 0.72rem;
-      color: rgba(255,255,255,0.4);
+      color: #9ca3af;
       margin-top: 6px;
       line-height: 1.5;
     }
     .cost-estimate-detail {
       font-size: 0.82rem;
-      color: rgba(255,255,255,0.75);
+      color: #374151;
       margin-top: 10px;
       line-height: 1.65;
     }
@@ -97,19 +97,19 @@
     }
     .cost-estimate-sub {
       font-size: 0.82rem;
-      color: #e8b230;
+      color: #a34300;
       margin-top: 8px;
       line-height: 1.6;
-      font-weight: 500;
+      font-weight: 600;
     }
     .cost-estimate-urgency {
       margin-top: 14px;
       padding: 12px 16px;
-      background: rgba(185,28,28,0.15);
+      background: #fef2f2;
       border-radius: var(--radius-sm);
       font-size: 0.82rem;
       font-weight: 600;
-      color: #fca5a5;
+      color: #b91c1c;
       line-height: 1.65;
     }
     .cost-estimate-cta-text {
@@ -433,6 +433,99 @@
       .final-consult-section { padding: 36px 16px; }
       .locked-section { padding: 20px 16px; }
     }
+
+    /* ===== レポートプレビュー（フォーム前・実データ／緑基調） ===== */
+    .report-preview-section {
+      padding: 40px 20px;
+      background: linear-gradient(180deg, #f3f8f4 0%, var(--white) 100%);
+    }
+    .report-preview-inner { max-width: 600px; margin: 0 auto; text-align: center; }
+    .report-preview-eyebrow {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      color: #1a5c3a; background: #e7f3ec; display: inline-block;
+      padding: 4px 14px; border-radius: 50px; margin-bottom: 12px;
+    }
+    .report-preview-heading {
+      font-size: 1.25rem; font-weight: 900; color: var(--text);
+      line-height: 1.5; margin-bottom: 8px;
+    }
+    .report-preview-sub {
+      font-size: 0.88rem; color: var(--text-sub); line-height: 1.7; margin-bottom: 22px;
+    }
+    .report-preview-frame {
+      position: relative;
+      background: #fff; border: 1px solid #d7e6dc; border-top: 4px solid #1a5c3a;
+      border-radius: var(--radius); box-shadow: 0 8px 30px rgba(15,61,38,0.10);
+      padding: 20px 18px 16px; text-align: left;
+    }
+    .report-preview-tag {
+      position: absolute; top: -11px; left: 16px;
+      font-size: 0.68rem; font-weight: 700; color: #fff; background: #1a5c3a;
+      padding: 3px 12px; border-radius: 50px;
+    }
+    .report-preview-foot {
+      font-size: 0.82rem; color: var(--text-mid); margin-top: 18px; line-height: 1.6;
+    }
+    .report-preview-cta-wrap { margin-top: 16px; }
+    .report-preview-cta { width: 100%; max-width: 420px; }
+    .report-preview-cta-note { font-size: 0.72rem; color: var(--text-sub); margin-top: 8px; }
+
+    /* プレビューカード内部（renderReportPreview が描画） */
+    .report-preview-card { font-size: 0.85rem; color: var(--text); }
+    .rp-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      flex-wrap: wrap; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #eef2f0;
+    }
+    .rp-rate { display: flex; align-items: baseline; gap: 2px; flex-wrap: wrap; }
+    .rp-rate-num { font-size: 2.6rem; font-weight: 900; color: #1a5c3a; line-height: 1; }
+    .rp-rate-unit { font-size: 1.1rem; font-weight: 900; color: #1a5c3a; }
+    .rp-rate-cap { font-size: 0.68rem; color: var(--text-sub); width: 100%; margin-top: 2px; }
+    .rp-rate-side { text-align: right; }
+    .rp-rating-badge {
+      display: inline-block; font-size: 0.74rem; font-weight: 800;
+      padding: 4px 12px; border-radius: 50px; border: 1px solid; line-height: 1.5;
+    }
+    .rp-score { display: block; font-size: 0.68rem; color: var(--text-light); margin-top: 5px; }
+    .rp-body { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+    .rp-radar { flex-shrink: 0; text-align: center; }
+    .rp-radar-img { width: 130px; height: 130px; display: block; }
+    .rp-radar-cap { font-size: 0.66rem; color: var(--text-light); }
+    .rp-bars { flex: 1; min-width: 0; }
+    .rp-bars-title {
+      font-size: 0.74rem; font-weight: 900; color: var(--text);
+      border-left: 3px solid #1a5c3a; padding-left: 7px; margin-bottom: 8px;
+    }
+    .rp-bar-row { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+    .rp-bar-label { width: 58px; font-size: 0.72rem; font-weight: 700; color: var(--text-mid); flex-shrink: 0; }
+    .rp-bar-track { flex: 1; height: 9px; background: #eef2f5; border-radius: 5px; overflow: hidden; }
+    .rp-bar-fill { display: block; height: 100%; border-radius: 5px; }
+    .rp-bar-val { width: 32px; font-size: 0.72rem; font-weight: 800; text-align: right; }
+    .rp-strip {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 12px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 12px;
+    }
+    .rp-strip--risk { background: #fef2f2; color: #b91c1c; }
+    .rp-strip--ok { background: #edf7f1; color: #1a5c3a; }
+    .rp-strip-ico { font-size: 0.95rem; }
+    .rp-strip-lock { font-size: 0.72rem; opacity: 0.85; margin-left: 4px; }
+    .rp-imp-head { font-size: 0.78rem; font-weight: 900; color: #1a5c3a; margin-bottom: 8px; }
+    .rp-imp-list { list-style: none; padding: 0; margin: 0; }
+    .rp-imp-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .rp-imp-num {
+      width: 18px; height: 18px; border-radius: 50%; background: #1a5c3a; color: #fff;
+      font-size: 0.66rem; font-weight: 900; display: inline-flex; align-items: center;
+      justify-content: center; flex-shrink: 0; line-height: 1;
+    }
+    .rp-imp-title { font-size: 0.8rem; color: var(--text-mid); font-weight: 600; line-height: 1.5; }
+
+    @media (max-width: 600px) {
+      .report-preview-section { padding: 32px 14px; }
+      .report-preview-heading { font-size: 1.08rem; }
+      .rp-body { flex-direction: column; align-items: stretch; }
+      .rp-radar { margin: 0 auto 4px; }
+      .rp-head { gap: 8px; }
+      .rp-rate-side { text-align: left; }
+    }
   </style>
 </head>
 <body data-page="result">
@@ -523,24 +616,7 @@
           </p>
         </div>
 
-        <!-- 想定損失額（概算） -->
-        <div class="cost-estimate-section" id="cost-estimate-section" style="display:none;">
-          <div class="cost-estimate-card">
-            <div class="cost-estimate-label">想定損失額（概算）</div>
-            <div class="cost-estimate-value" id="cost-estimate-value">—</div>
-            <div class="cost-estimate-sub" id="cost-estimate-sub">
-              この状態が続くと、上記の損失が毎年発生し続ける可能性があります。
-            </div>
-            <div class="cost-estimate-note">
-              ※ 早期離職が発生した場合の参考レンジです（簡易診断ベース・採用費/教育費/再採用費含む）
-            </div>
-            <div class="cost-estimate-detail" id="cost-estimate-detail"></div>
-            <div class="cost-estimate-urgency" id="cost-estimate-urgency">
-              放置するほど、損失は積み上がります。<br>
-              今のうちに、損失の原因と改善策を把握しませんか？
-            </div>
-          </div>
-        </div>
+        <!-- 想定損失額（概算）はゲート方針によりフォーム送信後エリア（#full-report-section）へ移動 -->
 
         <div style="margin-top: 14px;">
           <button class="result-retry-link js-retry" aria-label="診断をやり直す">
@@ -550,67 +626,37 @@
       </div>
     </section>
 
-    <!-- ② ロック済み4軸プレビュー（ぼかし表示） -->
-    <div class="locked-section" id="locked-axis-preview">
-      <div class="locked-section-title">
-        <span class="lock-icon">&#x1F50D;</span> 損失の原因を4つの観点で特定（完全版で確認）
-      </div>
-      <div class="blur-preview-cards" id="blur-axis-cards">
-        <div class="blur-preview-card">
-          <div class="blur-preview-card-label">戦略設計</div>
-          <div class="blur-preview-card-value">67%</div>
-          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:67%"></div></div>
-        </div>
-        <div class="blur-preview-card">
-          <div class="blur-preview-card-label">受入体制</div>
-          <div class="blur-preview-card-value">50%</div>
-          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:50%"></div></div>
-        </div>
-        <div class="blur-preview-card">
-          <div class="blur-preview-card-label">現場運用</div>
-          <div class="blur-preview-card-value">44%</div>
-          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:44%"></div></div>
-        </div>
-        <div class="blur-preview-card">
-          <div class="blur-preview-card-label">定着支援</div>
-          <div class="blur-preview-card-value">33%</div>
-          <div class="blur-preview-card-bar"><div class="blur-preview-card-bar-fill" style="width:33%"></div></div>
-        </div>
-      </div>
-      <div class="locked-overlay-v6 js-scroll-to-gate" role="button" tabindex="0" aria-label="損失の原因と改善策を確認する">
-        <span class="locked-overlay-pill">
-          <span>&#x1F50D;</span>
-          <span>損失の原因と改善策を確認する</span>
-        </span>
-      </div>
-    </div>
+    <!-- ② レポートプレビュー（フォーム前・実データ／公開範囲限定） -->
+    <!--   公開: 成功確率/評価/レーダー/各軸スコア/リスク件数/優先改善TOP3タイトル -->
+    <!--   ゲート: リスク詳細・改善アクション詳細・ROI試算・PDF本体（フォーム送信後） -->
+    <section class="report-preview-section" id="report-preview-section" aria-labelledby="report-preview-heading">
+      <div class="report-preview-inner">
+        <p class="report-preview-eyebrow">FREE REPORT</p>
+        <h2 class="report-preview-heading" id="report-preview-heading">このような診断レポートを無料で受け取れます</h2>
+        <p class="report-preview-sub">
+          フォーム入力後すぐに、下記をまとめた<strong>PDFレポート</strong>をお届けします。
+        </p>
 
-    <!-- ③ ロック済みリスクプレビュー -->
-    <div class="locked-section" id="locked-risks-preview">
-      <div class="locked-section-title">
-        <span class="lock-icon">&#x26A0;</span> この損失を引き起こしているリスク（<span id="locked-risk-count-v6">―</span>件検出）
-      </div>
-      <div class="locked-risks-preview" id="locked-risks-list">
-        <div class="locked-risk-placeholder">
-          <span class="locked-risk-ph-icon">&#x26A0;</span>
-          <span class="locked-risk-ph-text">深刻度：高 ― リスク内容は完全版レポートに記載</span>
+        <!-- PDF1ページ目プレビュー風カード（JSが実データで描画：#report-preview-card） -->
+        <div class="report-preview-frame">
+          <span class="report-preview-tag">&#x1F4C4; レポート1ページ目プレビュー</span>
+          <div class="report-preview-card" id="report-preview-card">
+            <!-- renderReportPreview() が描画 -->
+          </div>
         </div>
-        <div class="locked-risk-placeholder">
-          <span class="locked-risk-ph-icon">&#x25B3;</span>
-          <span class="locked-risk-ph-text">深刻度：中 ― 改善方向性を含めて整理されています</span>
-        </div>
-        <div class="locked-risk-placeholder">
-          <span class="locked-risk-ph-icon">&#x25B3;</span>
-          <span class="locked-risk-ph-text">深刻度：中 ― 詳細は完全版レポートをご確認ください</span>
+
+        <p class="report-preview-foot">
+          &#x1F4C4; PDFで保存・社内共有できます（経営層・上司への共有に最適）
+        </p>
+        <div class="report-preview-cta-wrap">
+          <button type="button" class="btn btn-cta btn-lg report-preview-cta js-scroll-to-gate"
+                  aria-label="無料レポートをPDFで受け取る">
+            無料レポートをPDFで受け取る
+          </button>
+          <p class="report-preview-cta-note">入力は30秒・営業電話なし・その場でPDF発行</p>
         </div>
       </div>
-      <div class="locked-overlay-v6 js-scroll-to-gate" role="button" tabindex="0" aria-label="リスクの詳細と改善策を確認する">
-        <span class="locked-overlay-pill">
-          <span>&#x26A0;</span>
-          <span>リスクの詳細と改善策を確認する</span>
-        </span>
-      </div>
-    </div>
+    </section>
 
     <!-- ④ メインCTA + 簡易フォーム（1本化） -->
     <section class="main-gate-section" id="main-gate-section" aria-labelledby="gate-heading">
@@ -728,13 +774,13 @@
 
             <div class="form-submit-wrap">
               <button type="submit" class="btn btn-cta btn-lg btn-block gate-form-submit" id="btn-form-submit">
-                損失の原因と改善策を確認する（無料）
+                無料レポートをPDFで受け取る
               </button>
               <!-- CTA候補（A/Bテスト用にコメントで残す）
-              候補A: 損失の原因と改善策を確認する（無料）← 現行
-              候補B: この損失を止める方法を見る（無料）
-              候補C: 無料で完全レポートを受け取る
-              候補D: 原因分析と改善の優先順位を確認する（無料）
+              候補A: 無料レポートをPDFで受け取る ← 現行（PDFレポート取得の価値を明示）
+              候補B: 診断レポート（PDF）を作成する
+              候補C: この内容をPDFで保存・社内共有する
+              候補D: 損失の原因と改善策を確認する（無料）← 旧・損失フレーム
               -->
             </div>
           </form>
@@ -810,6 +856,25 @@
 
         <!-- 危機認識ブロック（JS で描画） -->
         <div id="crisis-block-section" role="region" aria-label="リスク危機レベル"></div>
+
+        <!-- 想定損失額（概算）／ROI試算（ゲート後に表示。renderCostEstimate が描画） -->
+        <div class="cost-estimate-section" id="cost-estimate-section" style="display:none;">
+          <div class="cost-estimate-card">
+            <div class="cost-estimate-label">想定損失額（概算）</div>
+            <div class="cost-estimate-value" id="cost-estimate-value">—</div>
+            <div class="cost-estimate-sub" id="cost-estimate-sub">
+              この状態が続くと、上記の損失が毎年発生し続ける可能性があります。
+            </div>
+            <div class="cost-estimate-note">
+              ※ 早期離職が発生した場合の参考レンジです（簡易診断ベース・採用費/教育費/再採用費含む）
+            </div>
+            <div class="cost-estimate-detail" id="cost-estimate-detail"></div>
+            <div class="cost-estimate-urgency" id="cost-estimate-urgency">
+              放置するほど、損失は積み上がります。<br>
+              今のうちに、損失の原因と改善策を把握しませんか？
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
