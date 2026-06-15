@@ -332,6 +332,28 @@ const META_QUESTIONS = [
     ],
   },
   {
+    // 業種: スコア非影響のメタ設問（旧・診断導入ページの必須ゲートから移設）。
+    // 雇用経験(Q1)→活用状況(条件付)→業種 の順。選択値は onMetaSelect で
+    // saveIndustry() に併走保存し、AIコメントの loadIndustry() を維持する。
+    // options の value は結果フォーム #f-industry と一致させ、プリフィルを成立させる。
+    key: 'industry',
+    required: true,
+    position: 'pre',
+    label: 'はじめに',
+    text: '業種を選択してください',
+    options: [
+      { value: '製造業',        text: '製造業' },
+      { value: '建設業',        text: '建設業' },
+      { value: '農業・水産業',  text: '農業・水産業' },
+      { value: '介護・福祉',    text: '介護・福祉' },
+      { value: '外食・飲食',    text: '外食・飲食' },
+      { value: 'サービス業',    text: 'サービス業' },
+      { value: '小売・流通',    text: '小売・流通' },
+      { value: 'IT・情報通信',  text: 'IT・情報通信' },
+      { value: 'その他',        text: 'その他' },
+    ],
+  },
+  {
     key: 'role',
     required: true,
     label: '立場',
@@ -1128,6 +1150,19 @@ const CheckPage = {
     if (key === 'employment_experience' && value !== 'current') {
       delete this.meta.foreign_talent_status;
     }
+    // 業種: 既存の保存先（gtn_risk_industry）へ併走保存し、AIコメントの loadIndustry() を維持。
+    // GA4 industry_selected も従来計測を維持するため、診断開始後（check）で移設発火する。
+    if (key === 'industry') {
+      if (typeof saveIndustry === 'function') saveIndustry(value);
+      if (typeof trackEvent === 'function') {
+        trackEvent('industry_selected', {
+          page_id:  'diag_check',
+          industry: value,
+          source:   (typeof loadSource === 'function') ? loadSource() : '',
+          ref:      (typeof loadRef    === 'function') ? loadRef()    : '',
+        });
+      }
+    }
     saveMeta(this.meta);
     document.getElementById('btn-next').disabled = false;
     // 任意計測（既存イベントと並走・互換維持）
@@ -1226,6 +1261,18 @@ const ResultPage = {
     if (typeof saveAdsParams === 'function')   saveAdsParams();
     if (typeof initDebugMode === 'function')   initDebugMode();
     if (typeof primeSessionId === 'function')  primeSessionId();
+
+    // 結果フォームの業種 select #f-industry を、診断中（メタ設問）で選んだ業種でプリフィルする。
+    // ※現行 v6.0 は簡易フォーム（会社名＋メール＋任意の名前）で #f-industry はコメントアウト中
+    //   （result.html）のため、本処理は実質 no-op。フルフォーム復活時に二重質問を防ぐ前方互換。
+    //   taxonomy はメタ設問の options と #f-industry の option を一致させてあるため、復活後はそのまま機能。
+    try {
+      const _indEl = document.getElementById('f-industry');
+      const _ind   = (typeof loadIndustry === 'function') ? loadIndustry() : '';
+      if (_indEl && _ind && Array.from(_indEl.options).some(o => o.value === _ind)) {
+        _indEl.value = _ind;
+      }
+    } catch (_) {}
 
     // Phase3.2: complete_diagnosis 保険発火
     //   CheckPage.next() 経由でのページ遷移直前発火は、ブラウザによっては
