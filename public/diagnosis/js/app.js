@@ -2930,9 +2930,9 @@ ResultPage.buildReportHTML = function (formData) {
     <!-- ヒーロー：成功確率 ＋ 評価 ＋ 短評 -->
     <div style="display:flex;align-items:center;gap:18px;background:#fff;border:1px solid #e5e7eb;
                 border-radius:10px;padding:14px 18px;margin-bottom:12px;">
-      <div style="text-align:center;flex-shrink:0;">
-        <div style="font-size:46px;font-weight:900;color:#1a5c3a;line-height:1;">${this.rate}<span style="font-size:18px;">%</span></div>
-        <div style="font-size:9px;color:#6b7280;margin-top:3px;letter-spacing:0.04em;">戦力化・定着 成功確率</div>
+      <div style="text-align:center;flex-shrink:0;min-width:104px;">
+        <div style="font-size:44px;font-weight:900;color:#1a5c3a;line-height:1.2;height:54px;">${this.rate}<span style="font-size:18px;">%</span></div>
+        <div style="font-size:9.5px;color:#6b7280;margin-top:6px;letter-spacing:0.02em;line-height:1.45;">戦力化・定着<br>成功確率</div>
       </div>
       <div style="flex:1;">
         <div style="display:inline-block;padding:4px 12px;border-radius:50px;font-size:12px;font-weight:800;
