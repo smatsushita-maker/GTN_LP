@@ -526,15 +526,13 @@
     .rp-strip--ok { background: #edf7f1; color: #1a5c3a; }
     .rp-strip-ico { font-size: 0.95rem; }
     .rp-strip-lock { font-size: 0.72rem; opacity: 0.85; margin-left: 4px; }
-    .rp-imp-head { font-size: 0.78rem; font-weight: 900; color: #1a5c3a; margin-bottom: 8px; }
-    .rp-imp-list { list-style: none; padding: 0; margin: 0; }
-    .rp-imp-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
-    .rp-imp-num {
-      width: 18px; height: 18px; border-radius: 50%; background: #1a5c3a; color: #fff;
-      font-size: 0.66rem; font-weight: 900; display: inline-flex; align-items: center;
-      justify-content: center; flex-shrink: 0; line-height: 1;
-    }
-    .rp-imp-title { font-size: 0.8rem; color: var(--text-mid); font-weight: 600; line-height: 1.5; }
+    /* 完全レポートで「得られる価値」（処方箋＝改善内容そのものはゲート） */
+    .rp-includes { background: #f3f8f4; border: 1px dashed #9cc6ad; border-radius: 8px; padding: 11px 13px; }
+    .rp-includes-head { font-size: 0.8rem; font-weight: 900; color: #1a5c3a; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .rp-includes-head::before { content: '\1F512'; font-size: 0.85rem; }
+    .rp-includes-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; }
+    .rp-inc-item { display: flex; align-items: flex-start; gap: 6px; font-size: 0.78rem; color: var(--text-mid); line-height: 1.45; }
+    .rp-inc-check { color: #1a5c3a; font-weight: 900; flex-shrink: 0; }
 
     @media (max-width: 600px) {
       .report-preview-section { padding: 32px 14px; }
@@ -543,6 +541,64 @@
       .rp-radar { margin: 0 auto 4px; }
       .rp-head { gap: 8px; }
       .rp-rate-side { text-align: left; }
+      .rp-includes-list { grid-template-columns: 1fr; }
+    }
+
+    /* ===== ここまでが無料診断です（情報ギャップ） ===== */
+    .diag-gap-section { padding: 8px 20px 4px; }
+    .diag-gap-inner {
+      max-width: 600px; margin: 0 auto;
+      background: var(--primary-pale); border: 1px solid var(--border-light);
+      border-radius: var(--radius); padding: 22px 22px 18px; text-align: center;
+    }
+    .diag-gap-badge {
+      display: inline-block; font-size: 0.82rem; font-weight: 800; color: var(--white);
+      background: var(--primary); padding: 5px 18px; border-radius: 50px; margin-bottom: 12px;
+    }
+    .diag-gap-lead { font-size: 0.9rem; color: var(--text-mid); line-height: 1.7; margin-bottom: 14px; }
+    .diag-gap-list { list-style: none; padding: 0; margin: 0 auto 12px; max-width: 420px; text-align: left; }
+    .diag-gap-list li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.88rem; font-weight: 600; color: var(--text); line-height: 1.5;
+      padding: 9px 12px; margin-bottom: 7px;
+      background: var(--white); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+    }
+    .diag-gap-q {
+      width: 22px; height: 22px; border-radius: 50%; background: var(--cta-light); color: var(--cta-dark);
+      font-weight: 900; font-size: 0.85rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .diag-gap-foot { font-size: 0.82rem; color: var(--text-sub); line-height: 1.6; }
+
+    /* ===== フォーム下：運営会社の信頼要素 ===== */
+    .gate-form-company {
+      display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center;
+      margin-top: 10px; font-size: 0.74rem; color: var(--text-sub);
+    }
+    .gate-form-company-name { font-weight: 700; color: var(--text-mid); }
+    .gate-form-company-dot { color: var(--border); }
+
+    /* ===== PDF取得後の相談導線カード ===== */
+    .pdf-consult-card {
+      margin-top: 20px; padding: 18px 20px; text-align: left;
+      background: var(--primary-pale); border: 1px solid var(--border-light);
+      border-left: 4px solid var(--primary); border-radius: var(--radius);
+    }
+    .pdf-consult-eyebrow {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; color: var(--primary);
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .pdf-consult-title { font-size: 0.95rem; font-weight: 800; color: var(--text); line-height: 1.5; margin-bottom: 10px; }
+    .pdf-consult-list { list-style: none; padding: 0; margin: 0 0 14px; }
+    .pdf-consult-list li {
+      font-size: 0.85rem; color: var(--text-mid); line-height: 1.6; padding-left: 22px; position: relative;
+    }
+    .pdf-consult-list li::before { content: '\2713'; position: absolute; left: 0; color: var(--primary); font-weight: 900; }
+    .pdf-consult-btn { width: 100%; }
+    .pdf-consult-note { font-size: 0.72rem; color: var(--text-sub); text-align: center; margin-top: 8px; }
+
+    @media (max-width: 600px) {
+      .diag-gap-inner { padding: 18px 16px 14px; }
+      .pdf-consult-card { padding: 16px; }
     }
   </style>
 </head>
@@ -676,25 +732,34 @@
       </div>
     </section>
 
-    <!-- ④ メインCTA + 簡易フォーム（1本化） -->
+    <!-- ④ ここまでが無料診断です（情報ギャップ＝フォーム入力理由の明確化） -->
+    <section class="diag-gap-section" aria-label="無料診断はここまで">
+      <div class="diag-gap-inner">
+        <div class="diag-gap-badge">ここまでが無料診断です</div>
+        <p class="diag-gap-lead">
+          現在の課題・リスク・想定損失までは確認いただけました。<br>
+          ただし、<strong>次の3点はまだ表示されていません。</strong>
+        </p>
+        <ul class="diag-gap-list">
+          <li><span class="diag-gap-q">?</span><span>何から改善すべきか（改善の優先順位）</span></li>
+          <li><span class="diag-gap-q">?</span><span>どの順番で対応すべきか（改善ロードマップ）</span></li>
+          <li><span class="diag-gap-q">?</span><span>どれくらいの損失を防げるのか（改善効果）</span></li>
+        </ul>
+        <p class="diag-gap-foot">続き（改善の処方箋）は、下記の完全レポートでご確認いただけます。</p>
+      </div>
+    </section>
+
+    <!-- ⑤ メインCTA + 簡易フォーム（1本化） -->
     <section class="main-gate-section" id="main-gate-section" aria-labelledby="gate-heading">
       <div class="main-gate-inner">
         <span class="main-gate-badge">FULL REPORT</span>
         <h2 class="main-gate-title" id="gate-heading">
-          損失の原因はどこにあるのか。<br>
-          何を改善すれば止められるのか。
+          改善優先順位と具体的な打ち手を確認する
         </h2>
         <p class="main-gate-desc">
-          完全版レポートでは、貴社の診断データをもとに<br>
-          <strong>損失の原因・改善策・優先順位</strong>を個別に分析してお届けします。<br>
-          入力は2項目・約10秒で完了します。
+          会社名とメールのみ・<strong>約30秒</strong>で、<br>
+          <strong>貴社専用の改善レポート（PDF）</strong>をその場でお届けします。
         </p>
-        <ul class="main-gate-includes">
-          <li>損失を引き起こしているリスクの全件と深刻度</li>
-          <li>4軸（戦略・受入・運用・定着）ごとの<strong>原因分析と改善策</strong></li>
-          <li>最初に着手すべき<strong>優先改善ポイント</strong></li>
-          <li>GTN専門家からの経営コメント</li>
-        </ul>
 
         <!-- 簡易フォーム（会社名 + メールのみ） -->
         <div class="gate-form" id="gate-form-wrap">
@@ -808,9 +873,17 @@
             <a href="https://globaltalent-navi.com/privacy" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a>
           </p>
           <div class="gate-form-trust">
-            <span class="gate-form-trust-item">&#x1F4E7; 即時メール送信</span>
-            <span class="gate-form-trust-item">&#x1F512; 秘密厳守</span>
-            <span class="gate-form-trust-item">&#x1F4F5; 営業電話なし</span>
+            <span class="gate-form-trust-item">&#x23F1; 所要時間 約30秒</span>
+            <span class="gate-form-trust-item">&#x1F4C4; PDFはすぐ受け取れます</span>
+            <span class="gate-form-trust-item">&#x1F4F5; しつこい営業はしません</span>
+            <span class="gate-form-trust-item">&#x1F512; 診断結果は外部公開しません</span>
+          </div>
+          <div class="gate-form-company">
+            <span class="gate-form-company-name">株式会社フレアー</span>
+            <span class="gate-form-company-dot" aria-hidden="true">・</span>
+            <span class="gate-form-company-fact">創業25年</span>
+            <span class="gate-form-company-dot" aria-hidden="true">・</span>
+            <span class="gate-form-company-fact">外国人材支援の実績 10年以上</span>
           </div>
         </div>
 
@@ -852,6 +925,23 @@
           <div class="pdf-email-note">
             <span>&#x1F4E7;</span>
             <span>ご登録のメールアドレスにもレポートを送付します</span>
+          </div>
+
+          <!-- PDF取得後の相談導線（PDFをゴールにせず相談予約へ） -->
+          <div class="pdf-consult-card">
+            <div class="pdf-consult-eyebrow">次のステップ</div>
+            <div class="pdf-consult-title">診断結果をもとに「外国人材活用 改善相談」（60分・無料）</div>
+            <ul class="pdf-consult-list">
+              <li>診断結果の解説</li>
+              <li>改善優先順位の整理</li>
+              <li>定着率向上施策の提案</li>
+            </ul>
+            <a href="#" class="btn btn-cta js-consult-link pdf-consult-btn"
+               data-consult-location="pdf_section"
+               onclick="trackEvent &amp;&amp; trackEvent('cta_click', {cta_id:'consult_pdf', location:'pdf_section'})">
+              無料相談を予約する（60分）
+            </a>
+            <p class="pdf-consult-note">無料 ／ オンライン対応 ／ 無理な営業なし</p>
           </div>
         </div>
       </div>
