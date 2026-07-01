@@ -747,13 +747,17 @@ function saveTrackingParams() {
    GA4 イベント
    ============================================= */
 function trackEvent(name, params = {}) {
+  // legacy イベントにも debug_mode を付与（テスト除外を可能に・既存paramは非破壊）
+  const p = (typeof isDebugMode === 'function' && isDebugMode())
+    ? { ...params, debug_mode: true }
+    : params;
   // GA4 gtag
   if (typeof gtag !== 'undefined') {
-    gtag('event', name, params);
+    gtag('event', name, p);
   }
   // GTM dataLayer
   if (typeof dataLayer !== 'undefined') {
-    dataLayer.push({ event: name, ...params });
+    dataLayer.push({ event: name, ...p });
   }
 }
 
@@ -784,6 +788,7 @@ async function sendToGAS(payload) {
       mode:   'no-cors', // GASはno-corsが必要（レスポンス本文は読めない）
       headers: { 'Content-Type': 'application/json' },
       body:   JSON.stringify(payload),
+      keepalive: true, // タブ離脱後も送信を完遂（payloadは64KB未満で上限内）
     });
 
     // ── デバッグ: fetch 完了（no-cors は type:'opaque' になる） ──
@@ -1507,6 +1512,10 @@ const ResultPage = {
         return;
       }
 
+      // A) 二重送信防止（連打・Enter・多重発火で CV/POST が重複しないように）
+      if (this._isSubmitting) return;
+      this._isSubmitting = true;
+
       const submitBtn = form.querySelector('[type="submit"]');
       submitBtn.disabled = true;
       submitBtn.textContent = '送信中...';
@@ -1518,6 +1527,14 @@ const ResultPage = {
       console.log('formData :', JSON.parse(JSON.stringify(formData)));
       console.log('payload  :', JSON.parse(JSON.stringify(payload)));
       console.groupEnd();
+
+      // B) Ads CV（速報）: 「送信を確定した」事実を GAS 応答に依存させず先に記録する。
+      //    名前/パラメータは従来互換（score / diagnosis_result_type）。
+      //    getCommonParams が gclid/utm/session_id/debug_mode を付与。旧・末尾の submit_lead_form は削除済み。
+      trackNewEvent('submit_lead_form', {
+        score:                 this.score,
+        diagnosis_result_type: this.rating,
+      });
 
       await sendToGAS(payload);
 
@@ -1630,11 +1647,6 @@ const ResultPage = {
         rating:  this.rating,
         source:  loadSource(),
         ref:     loadRef(),
-      });
-      // Phase3.2: Google広告コンバージョン候補 — フォーム送信完了
-      trackNewEvent('submit_lead_form', {
-        score:                 this.score,
-        diagnosis_result_type: this.rating,
       });
     });
   },
